@@ -1,0 +1,7 @@
+/TODO.md
+/build/
+/.cache/
+/.vscode/
+/.vs/
+/.clangd
+/*.ssl
