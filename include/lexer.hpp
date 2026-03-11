@@ -15,8 +15,8 @@ struct Lexer {
    char advance();
    char getEscapeCode(char escape);
 
-   void pushToken(TokenType type, const std::string &lexeme);
-   void pushTokenKeyword(KeywordType type, const std::string &lexeme);
+   void pushToken(TokenType type, const std::string &lexeme, size_t line);
+   void pushTokenKeyword(KeywordType type, const std::string &lexeme, size_t line);
 
    // members
 

@@ -46,7 +46,7 @@ std::vector<Token> &Lexer::lex() {
                lastDash = false;
                number.push_back(ch);
             } else if (ch == '.') {
-               if (dot) {
+               if (dot || !isdigit(peek())) {
                   break;
                }
                dot = true;
@@ -64,11 +64,11 @@ std::vector<Token> &Lexer::lex() {
             ch = advance();
          }
 
-         if (lastDash) {
-            raiseError(line, "Expected number '%s' to not end with an apostrophe or a dot.", number.c_str());
+         if (lastDash && code[index - 1] == '\'') {
+            raiseError(line, "Expected number '%s' to not end with an apostrophe.", number.c_str());
          }
 
-         pushToken(TokenType::number, number);
+         pushToken(TokenType::number, number, line);
          index -= 1;
       }
       // strings
@@ -89,7 +89,7 @@ std::vector<Token> &Lexer::lex() {
          if (ch != '"') {
             raiseError(originalLine, "Unterminated string.");
          }
-         pushToken(TokenType::string, string);
+         pushToken(TokenType::string, string, originalLine);
       }
       // identifiers
       else if (isalpha(ch) || ch == '_') {
@@ -101,9 +101,9 @@ std::vector<Token> &Lexer::lex() {
          }
 
          if (auto it = keywords.find(identifier); it != keywords.end()) {
-            pushTokenKeyword(it->second, identifier);
+            pushTokenKeyword(it->second, identifier, line);
          } else {
-            pushToken(TokenType::identifier, identifier);
+            pushToken(TokenType::identifier, identifier, line);
          }
          index -= 1;
       }
@@ -118,7 +118,7 @@ std::vector<Token> &Lexer::lex() {
          size_t originalSize = op.size();
          for (size_t i = 0; i < originalSize; ++i) {
             if (auto oper = operators.find(op); oper != operators.end()) {
-               pushToken(oper->second, op);
+               pushToken(oper->second, op, line);
                break;
             }
             op.pop_back();
@@ -130,7 +130,7 @@ std::vector<Token> &Lexer::lex() {
          index += op.size() - 1;
       }
    }
-   pushToken(TokenType::eof, "EOF");
+   pushToken(TokenType::eof, "EOF", line);
    return tokens;
 }
 
@@ -167,10 +167,10 @@ char Lexer::getEscapeCode(char escape) {
    return escapeCodeMap.at(escape);
 }
 
-void Lexer::pushToken(TokenType type, const std::string &lexeme) {
+void Lexer::pushToken(TokenType type, const std::string &lexeme, size_t line) {
    tokens.push_back(Token{type, KeywordType::none, lexeme, line});
 }
 
-void Lexer::pushTokenKeyword(KeywordType type, const std::string &lexeme) {
+void Lexer::pushTokenKeyword(KeywordType type, const std::string &lexeme, size_t line) {
    tokens.push_back(Token{TokenType::keyword, type, lexeme, line});
 }

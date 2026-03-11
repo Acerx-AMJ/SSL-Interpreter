@@ -4,17 +4,18 @@
 
 int main(int argc, char *argv[]) {
    if (argc != 2) {
-      raiseErrorNoLine("Expected exactly 2 arguments, got %d instead.", argc);
+      raiseErrorNoLine("Expected 2 arguments, got %d instead.", argc);
    }
 
    std::string input = argv[1];
    getInputOrReadFile(input);
+   setProgramCode(&input);
 
    Lexer lexer (input);
    std::vector<Token> &tokens = lexer.lex();
 
    for (Token &token: tokens) {
-      printf("%s - %s - %s\n", getTokenTypeAsString(token.type), getKeywordTypeAsString(token.keywordType), token.lexeme.c_str());
+      printf("%lu; %s - %s\n", token.line, getTokenTypeAsString(token.type), token.lexeme.c_str());
    }
    return 0;
 }
