@@ -1,6 +1,6 @@
-#include "error.hpp"
 #include "input.hpp"
 #include "lexer.hpp"
+#include "parser.hpp"
 
 int main(int argc, char *argv[]) {
    if (argc != 2) {
@@ -14,8 +14,12 @@ int main(int argc, char *argv[]) {
    Lexer lexer (input);
    std::vector<Token> &tokens = lexer.lex();
 
-   for (Token &token: tokens) {
-      printf("%lu; %s - %s\n", token.line, getTokenTypeAsString(token.type), token.lexeme.c_str());
+   Parser parser (tokens);
+   Program &program = parser.parse();
+
+   for (size_t index = 0; index < program.nodes.size; ++index) {
+      Node &node = parser.arena.get(parser.arena.children[index]);
+      printf("%s - %lu\n", getStatementTypeAsString(node.type), node.line);
    }
    return 0;
 }

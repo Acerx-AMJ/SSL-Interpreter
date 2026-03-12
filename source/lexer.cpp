@@ -57,7 +57,8 @@ std::vector<Token> &Lexer::lex() {
             
             if (ch == '\'' || ch == '.') {
                if (lastDash) {
-                  raiseError(line, "Expected number '%s' to not have two or more consecutive apostrophes or dots.", number.c_str());
+                  raiseError(line, "Expected number '%s' to not have two or more consecutive "
+                                   "apostrophes or dots.", number.c_str());
                }
                lastDash = true;
             }
