@@ -231,11 +231,13 @@ struct ASTArena {
 
    StringId pushString(const std::string &string);
    std::string_view getString(StringId id) const;
-
    NodeList pushVector(const std::vector<NodeId> &values);
 
    Node &get(NodeId id);
    const Node &get(NodeId id) const;
+
+   void printList(NodeList list, int indentation = 0) const;
+   void print(NodeId id, int indentation = 0) const;
 
    template<StmtType type, class T>
    T &as(NodeId id) {

@@ -16,10 +16,6 @@ int main(int argc, char *argv[]) {
 
    Parser parser (tokens);
    Program &program = parser.parse();
-
-   for (size_t index = 0; index < program.nodes.size; ++index) {
-      Node &node = parser.arena.get(parser.arena.children[index]);
-      printf("%s - %lu\n", getStatementTypeAsString(node.type), node.line);
-   }
+   parser.arena.printList(program.nodes);
    return 0;
 }
