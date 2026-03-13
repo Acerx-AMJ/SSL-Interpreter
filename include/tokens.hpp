@@ -6,7 +6,7 @@
 
 enum class TokenType: char {
    eof, keyword, identifier, number, string,
-   increment, decrement, equals, plusEquals, minusEquals, starEquals, slashEquals, modEquals, powEquals,
+   increment, decrement, colonEquals, equals, plusEquals, minusEquals, starEquals, slashEquals, modEquals, powEquals,
    plus, minus, star, slash, mod, pow,
    divisible, equalsEquals, notEquals, bigger, biggerEquals, smaller, smallerEquals,
    lparen, rparen, lbracket, rbracket, lbrace, rbrace, comma, reference, dot,
@@ -14,7 +14,7 @@ enum class TokenType: char {
 
 enum class KeywordType: char {
    none, kand, kor, knot,
-   kmut, kcon, kif, kelif, kelse, kend, kmatch, kcase,
+   kif, kelif, kelse, kend, kmatch, kcase,
    kenum, kfn, klambda, kstruct,
    kfor, kin, kto, kuntil, kloop, kwhile, kdo,
    kcontinue, kbreak, kreturn, kunless,
@@ -23,7 +23,7 @@ enum class KeywordType: char {
 
 constexpr const char *tokenTypeStrings[] {
    "EOF", "Keyword", "Identifier", "Number", "String",
-   "++", "--", "=", "+=", "-=", "*=", "/=", "%=", "**=",
+   "++", "--", ":=", "=", "+=", "-=", "*=", "/=", "%=", "**=",
    "+", "-", "*", "/", "%", "**",
    "%%", "==", "!=", ">", ">=", "<", "<=",
    "(", ")", "{", "}", "[", "]", ",", "&", "."
@@ -31,7 +31,7 @@ constexpr const char *tokenTypeStrings[] {
 
 constexpr const char *keywordTypesStrings[] {
    "none", "and", "or", "not",
-   "mut", "con", "if", "elif", "else", "end", "match", "case",
+   "if", "elif", "else", "end", "match", "case",
    "enum", "fn", "lambda", "struct",
    "for", "in", "to", "until", "loop", "while", "do",
    "continue", "break", "return", "unless",
@@ -57,6 +57,7 @@ static inline constexpr size_t maxOperatorSize = 3;
 static inline const std::unordered_map<std::string_view, TokenType> operators {
    {"++",  TokenType::increment},
    {"--",  TokenType::decrement},
+   {":=",  TokenType::colonEquals},
    {"=",   TokenType::equals},
    {"+=",  TokenType::plusEquals},
    {"-=",  TokenType::minusEquals},
@@ -92,8 +93,6 @@ static inline const std::unordered_map<std::string_view, KeywordType> keywords {
    {"and",      KeywordType::kand},
    {"or",       KeywordType::kor},
    {"not",      KeywordType::knot},
-   {"mut",      KeywordType::kmut},
-   {"con",      KeywordType::kcon},
    {"if",       KeywordType::kif},
    {"elif",     KeywordType::kelif},
    {"else",     KeywordType::kelse},
