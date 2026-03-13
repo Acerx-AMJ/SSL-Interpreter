@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "error.hpp"
 
 Parser::Parser(std::vector<Token> &tokens)
    : tokens(tokens) {}
@@ -18,25 +19,32 @@ Program &Parser::parse() {
 // parsing
 
 NodeId Parser::parseStmt() {
-   KeywordType keyword = current().keywordType;
+   TokenType keyword = current().type;
    bool isPublic = true;
+   bool wasPublicModifierSet = false;
    
    // advance on pub and prv keywords
-   if (keyword == KeywordType::kpub) {
+   if (keyword == TokenType::kpub) {
+      wasPublicModifierSet = true;
       advance();
-   } else if (keyword == KeywordType::kprv) {
-      advance();
+   } else if (keyword == TokenType::kprv) {
+      wasPublicModifierSet = true;
       isPublic = false;
+      advance();
    }
 
-   keyword = current().keywordType;
+   keyword = current().type;
    if (peek(TokenType::colonEquals)) {
       return parseVarDecl(isPublic);
-   } else if (keyword == KeywordType::kfn) {
+   } else if (keyword == TokenType::kfn) {
       return parseFnDecl(isPublic);
+   } else if (keyword == TokenType::kenum) {
+      return parseEnumDecl(isPublic);
    }
    return parseExpr();
 }
+
+// statements
 
 NodeId Parser::parseVarDecl(bool isPublic) {
    expect(StmtType::varDecl, TokenType::identifier);
@@ -75,6 +83,59 @@ NodeId Parser::parseFnDecl(bool isPublic) {
    NodeId program = parseProgram();
    return arena.allocateFnDecl(isPublic, identifier, program, parameters, line());
 }
+
+NodeId Parser::parseEnumDecl(bool isPublic) {
+   advance();
+   expect(StmtType::enumDecl, TokenType::identifier);
+
+   std::string identifier = current().lexeme;
+   std::vector<NodeId> entries;
+
+   do {
+      advance();
+      if (current().type == TokenType::kend) {
+         break;
+      }
+
+      expect(StmtType::enumDecl, TokenType::identifier);
+      std::vector<NodeId> args, argValues;
+      std::string identifier = current().lexeme;
+      NodeId value = null;
+
+      advance();
+      if (current().type == TokenType::lparen) {
+         do {
+            advance();
+            if (is(TokenType::rparen)) {
+               break;
+            }
+
+            expect(StmtType::enumDecl, TokenType::identifier);
+            NodeId identifier = parsePrimaryExpr();
+
+            args.push_back(identifier);
+            argValues.push_back(null);
+         } while (is(TokenType::comma));
+
+         expect(StmtType::enumDecl, TokenType::rparen);
+         advance();
+      }
+
+      if (current().type == TokenType::equals) {
+         advance();
+         value = parseExpr();
+      }
+      
+      NodeId entry = arena.allocateEnumEntry(identifier, value, args, argValues, line());
+      entries.push_back(entry);
+   } while (is(TokenType::comma));
+
+   expect(StmtType::enumDecl, TokenType::kend);
+   advance();
+   return arena.allocateEnumDecl(isPublic, identifier, entries, line());
+}
+
+// expressions
 
 NodeId Parser::parseExpr() {
    return parseAdditiveExpr();
@@ -153,7 +214,7 @@ NodeId Parser::parseProgram() {
    std::vector<NodeId> nodes;
    size_t originalLine = line();
    
-   while (current().keywordType != KeywordType::kend) {
+   while (current().type != TokenType::kend) {
       NodeId node = parseStmt();
       nodes.push_back(node);
    }
@@ -172,7 +233,7 @@ void Parser::advance() {
 
 void Parser::expect(StmtType type, TokenType expected) {
    if (!is(expected)) {
-      raiseError(line(), "%s: expected %s, got %s istead.", getStatementTypeAsString(type),
+      raiseError(line(), "%s: expected %s, got %s instead.", getStatementTypeAsString(type),
          getTokenTypeAsString(expected), getTokenTypeAsString(current().type));
    }
 }

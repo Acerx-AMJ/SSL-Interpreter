@@ -1,7 +1,6 @@
 #ifndef SSL_AST_HPP
 #define SSL_AST_HPP
 
-#include "error.hpp"
 #include "tokens.hpp"
 #include <cstdint>
 #include <vector>
@@ -30,6 +29,8 @@ constexpr const char *getStatementTypeAsString(StmtType type) {
 
 using NodeId = uint32_t;
 using StringId = uint32_t;
+
+constexpr NodeId null = 0;
 
 struct NodeList {
    size_t start = 0;
@@ -73,7 +74,7 @@ struct IfStmt {
 };
 
 struct IfClause {
-   KeywordType keyword;
+   TokenType keyword;
    NodeId expression;
    NodeId statement;
 };
@@ -248,7 +249,7 @@ struct ASTArena {
    NodeId allocateEnumDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &entries, size_t line);
    NodeId allocateStructDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &decls, size_t line);
    NodeId allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elifClauses, NodeId elseClause, size_t line);
-   NodeId allocateIfClause(KeywordType keyword, NodeId expression, NodeId statement, size_t line);
+   NodeId allocateIfClause(TokenType keyword, NodeId expression, NodeId statement, size_t line);
    NodeId allocateMatchStmt(const std::vector<NodeId> &cases, NodeId elseClause, size_t line);
    NodeId allocateMatchCase(NodeId expression, NodeId statement, size_t line);
    NodeId allocateForLoop(const std::string &identifier, NodeId inExpression, NodeId body, size_t line);

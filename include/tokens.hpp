@@ -5,14 +5,11 @@
 #include <unordered_map>
 
 enum class TokenType: char {
-   eof, keyword, identifier, number, string,
+   eof, identifier, number, string,
    increment, decrement, colonEquals, equals, plusEquals, minusEquals, starEquals, slashEquals, modEquals, powEquals,
    plus, minus, star, slash, mod, pow,
    divisible, equalsEquals, notEquals, bigger, biggerEquals, smaller, smallerEquals,
    lparen, rparen, lbracket, rbracket, lbrace, rbrace, comma, reference, dot,
-};
-
-enum class KeywordType: char {
    none, kand, kor, knot,
    kif, kelif, kelse, kend, kmatch, kcase,
    kenum, kfn, klambda, kstruct,
@@ -22,14 +19,11 @@ enum class KeywordType: char {
 };
 
 constexpr const char *tokenTypeStrings[] {
-   "EOF", "Keyword", "Identifier", "Number", "String",
+   "EOF", "Identifier", "Number", "String",
    "++", "--", ":=", "=", "+=", "-=", "*=", "/=", "%=", "**=",
    "+", "-", "*", "/", "%", "**",
    "%%", "==", "!=", ">", ">=", "<", "<=",
-   "(", ")", "{", "}", "[", "]", ",", "&", "."
-};
-
-constexpr const char *keywordTypesStrings[] {
+   "(", ")", "{", "}", "[", "]", ",", "&", ".",
    "none", "and", "or", "not",
    "if", "elif", "else", "end", "match", "case",
    "enum", "fn", "lambda", "struct",
@@ -42,13 +36,8 @@ constexpr const char *getTokenTypeAsString(TokenType type) {
    return tokenTypeStrings[(size_t)type];
 }
 
-constexpr const char *getKeywordTypeAsString(KeywordType type) {
-   return keywordTypesStrings[(size_t)type];
-}
-
 struct Token {
    TokenType type;
-   KeywordType keywordType;
    std::string lexeme;
    size_t line;
 };
@@ -89,37 +78,37 @@ static inline const std::unordered_map<std::string_view, TokenType> operators {
    {".",   TokenType::dot},
 };
 
-static inline const std::unordered_map<std::string_view, KeywordType> keywords {
-   {"and",      KeywordType::kand},
-   {"or",       KeywordType::kor},
-   {"not",      KeywordType::knot},
-   {"if",       KeywordType::kif},
-   {"elif",     KeywordType::kelif},
-   {"else",     KeywordType::kelse},
-   {"end",      KeywordType::kend},
-   {"match",    KeywordType::kmatch},
-   {"case",     KeywordType::kcase},
-   {"enum",     KeywordType::kenum},
-   {"fn",       KeywordType::kfn},
-   {"lambda",   KeywordType::klambda},
-   {"struct",   KeywordType::kstruct},
-   {"for",      KeywordType::kfor},
-   {"in",       KeywordType::kin},
-   {"to",       KeywordType::kto},
-   {"until",    KeywordType::kuntil},
-   {"loop",     KeywordType::kloop},
-   {"while",    KeywordType::kwhile},
-   {"do",       KeywordType::kdo},
-   {"continue", KeywordType::kcontinue},
-   {"break",    KeywordType::kbreak},
-   {"return",   KeywordType::kreturn},
-   {"unless",   KeywordType::kunless},
-   {"pub",      KeywordType::kpub},
-   {"prv",      KeywordType::kprv},
-   {"import",   KeywordType::kimport},
-   {"all",      KeywordType::kall},
-   {"from",     KeywordType::kfrom},
-   {"as",       KeywordType::kas},
+static inline const std::unordered_map<std::string_view, TokenType> keywords {
+   {"and",      TokenType::kand},
+   {"or",       TokenType::kor},
+   {"not",      TokenType::knot},
+   {"if",       TokenType::kif},
+   {"elif",     TokenType::kelif},
+   {"else",     TokenType::kelse},
+   {"end",      TokenType::kend},
+   {"match",    TokenType::kmatch},
+   {"case",     TokenType::kcase},
+   {"enum",     TokenType::kenum},
+   {"fn",       TokenType::kfn},
+   {"lambda",   TokenType::klambda},
+   {"struct",   TokenType::kstruct},
+   {"for",      TokenType::kfor},
+   {"in",       TokenType::kin},
+   {"to",       TokenType::kto},
+   {"until",    TokenType::kuntil},
+   {"loop",     TokenType::kloop},
+   {"while",    TokenType::kwhile},
+   {"do",       TokenType::kdo},
+   {"continue", TokenType::kcontinue},
+   {"break",    TokenType::kbreak},
+   {"return",   TokenType::kreturn},
+   {"unless",   TokenType::kunless},
+   {"pub",      TokenType::kpub},
+   {"prv",      TokenType::kprv},
+   {"import",   TokenType::kimport},
+   {"all",      TokenType::kall},
+   {"from",     TokenType::kfrom},
+   {"as",       TokenType::kas},
 };
 
 #endif

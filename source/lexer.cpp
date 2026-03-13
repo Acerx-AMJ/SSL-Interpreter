@@ -102,7 +102,7 @@ std::vector<Token> &Lexer::lex() {
          }
 
          if (auto it = keywords.find(identifier); it != keywords.end()) {
-            pushTokenKeyword(it->second, identifier, line);
+            pushToken(it->second, identifier, line);
          } else {
             pushToken(TokenType::identifier, identifier, line);
          }
@@ -169,9 +169,5 @@ char Lexer::getEscapeCode(char escape) {
 }
 
 void Lexer::pushToken(TokenType type, const std::string &lexeme, size_t line) {
-   tokens.push_back(Token{type, KeywordType::none, lexeme, line});
-}
-
-void Lexer::pushTokenKeyword(KeywordType type, const std::string &lexeme, size_t line) {
-   tokens.push_back(Token{TokenType::keyword, type, lexeme, line});
+   tokens.push_back(Token{type, lexeme, line});
 }

@@ -1,3 +1,4 @@
+#include "error.hpp"
 #include "input.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
@@ -16,6 +17,7 @@ int main(int argc, char *argv[]) {
 
    Parser parser (tokens);
    Program &program = parser.parse();
+
    parser.arena.printList(program.nodes);
    return 0;
 }

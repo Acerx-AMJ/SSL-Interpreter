@@ -4,7 +4,10 @@ ASTArena::ASTArena() {
    nodes.reserve(256);
    children.reserve(256);
    strings.reserve(128);
-   nodes.push_back({}); // 0 - invalid
+
+   Node null {StmtType::null, 0};
+   null.null = {};
+   nodes.push_back(null);
 }
 
 StringId ASTArena::pushString(const std::string &string) {
@@ -79,7 +82,7 @@ void ASTArena::print(NodeId id, int indentation) const {
       print(node.ifStmt.elseClause, indentation + 1);
       break;
    } case StmtType::ifClause: {
-      printf("%s:", getKeywordTypeAsString(node.ifClause.keyword));
+      printf("%s:", getTokenTypeAsString(node.ifClause.keyword));
       print(node.ifClause.expression, indentation + 1);
       print(node.ifClause.statement, indentation + 1);
       break;
@@ -227,7 +230,7 @@ NodeId ASTArena::allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elif
    return allocate(node);
 }
 
-NodeId ASTArena::allocateIfClause(KeywordType keyword, NodeId expression, NodeId statement, size_t line) {
+NodeId ASTArena::allocateIfClause(TokenType keyword, NodeId expression, NodeId statement, size_t line) {
    Node node {StmtType::ifClause, line};
    node.ifClause = {keyword, expression, statement};
    return allocate(node);
@@ -366,9 +369,7 @@ NodeId ASTArena::allocateArray(const std::vector<NodeId> &values, size_t line) {
 }
 
 NodeId ASTArena::allocateNull(size_t line) {
-   Node node {StmtType::null, line};
-   node.null = {};
-   return allocate(node);
+   return null;
 }
 
 NodeId ASTArena::allocateProgram(const std::vector<NodeId> &nodes, size_t line) {
