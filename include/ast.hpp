@@ -20,8 +20,8 @@ constexpr const char *statementTypeStrings[] {
    "Structure Declaration", "If Statement", "If Clause", "Match Statement", "Match Case",
    "For Loop", "Loop", "While Loop", "Do While Loop", "Break Statement", "Continue Statement",
    "Return Statement", "Unless Statement", "Do Statement", "Import Statement", "Assignment",
-   "Binary Expression", "Unary Expression", "Property Access", "Function Call", "Identifier",
-   "Enumeration Entry", "Number", "String", "Array", "Null", "Scope",
+   "Binary Expression", "Unary Expression", "Property Access", "Function Call", "Enumeration Entry",
+   "Identifier", "Number", "String", "Array", "Null", "Scope",
 };
 
 constexpr const char *getStatementTypeAsString(StmtType type) {
@@ -238,49 +238,6 @@ struct ASTArena {
 
    void printList(NodeList list, int indentation = 0) const;
    void print(NodeId id, int indentation = 0) const;
-
-   template<StmtType type, class T>
-   T &as(NodeId id) {
-      Node &node = get(id);
-      if (node.type != type) {
-         raiseError(node.line, "Node type does not match desired type (%s != %s).",
-            getStatementTypeAsString(node.type), getStatementTypeAsString(type));
-      }
-
-      switch (type) {
-      case StmtType::varDecl:      return node.varDecl;
-      case StmtType::fnDecl:       return node.fnDecl;
-      case StmtType::lambda:       return node.lambda;
-      case StmtType::enumDecl:     return node.enumDecl;
-      case StmtType::structDecl:   return node.structDecl;
-      case StmtType::ifStmt:       return node.ifStmt;
-      case StmtType::ifClause:     return node.ifClause;
-      case StmtType::matchStmt:    return node.matchStmt;
-      case StmtType::matchCase:    return node.matchCase;
-      case StmtType::forLoop:      return node.forLoop;
-      case StmtType::loop:         return node.loop;
-      case StmtType::whileLoop:    return node.whileLoop;
-      case StmtType::doWhileLoop:  return node.doWhileLoop;
-      case StmtType::breakStmt:    return node.breakStmt;
-      case StmtType::continueStmt: return node.continueStmt;
-      case StmtType::returnStmt:   return node.returnStmt;
-      case StmtType::unlessStmt:   return node.unlessStmt;
-      case StmtType::doStmt:       return node.doStmt;
-      case StmtType::importStmt:   return node.importStmt;
-      case StmtType::assignment:   return node.assignment;
-      case StmtType::binary:       return node.binary;
-      case StmtType::unary:        return node.unary;
-      case StmtType::property:     return node.property;
-      case StmtType::call:         return node.fnCall;
-      case StmtType::enumEntry:    return node.enumEntry;
-      case StmtType::identifier:   return node.identifier;
-      case StmtType::number:       return node.number;
-      case StmtType::string:       return node.string;
-      case StmtType::array:        return node.array;
-      case StmtType::null:         return node.null;
-      case StmtType::program:      return node.program;
-      }
-   }
 
    // builders
 

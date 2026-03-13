@@ -34,7 +34,6 @@ const Node &ASTArena::get(NodeId id) const {
 }
 
 void ASTArena::printList(NodeList list, int indentation) const {
-   putchar('\n');
    for (size_t i = list.start; i < list.size + list.start; ++i) {
       print(children[i], indentation + 1);
    }
