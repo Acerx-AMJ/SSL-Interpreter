@@ -43,7 +43,6 @@ struct Parser {
    NodeId parseRangeExpr();
    NodeId parseCallExpr();
    NodeId parsePrimaryExpr();
-   NodeId parseProgram();
 
    // utility
 

@@ -40,6 +40,17 @@ NodeId Parser::parseStmt() {
       return parseFnDecl(isPublic);
    } else if (keyword == TokenType::kenum) {
       return parseEnumDecl(isPublic);
+   } else if (keyword == TokenType::kstruct) {
+      return parseStructDecl(isPublic);
+   }
+
+   if (wasPublicModifierSet) {
+      raiseError(line(), "pub/prv can only be used before variables, functions, enumerations and "
+                         "structures, not %s.", getTokenTypeAsString(keyword));
+   }
+
+   if (keyword == TokenType::kif) {
+      return parseIfStmt();
    }
    return parseExpr();
 }
@@ -47,17 +58,22 @@ NodeId Parser::parseStmt() {
 // statements
 
 NodeId Parser::parseVarDecl(bool isPublic) {
+   size_t originalLine = line();
+
    expect(StmtType::varDecl, TokenType::identifier);
    std::string identifier = current().lexeme;
+
    advance();
    advance(); // we know this from 'parseStmt'
 
    NodeId value = parseExpr();
-   return arena.allocateVarDecl(isPublic, identifier, value, line());
+   return arena.allocateVarDecl(isPublic, identifier, value, originalLine);
 }
 
 NodeId Parser::parseFnDecl(bool isPublic) {
+   size_t originalLine = line();
    advance();
+
    expect(StmtType::fnDecl, TokenType::identifier);
    std::string identifier = current().lexeme;
 
@@ -80,20 +96,38 @@ NodeId Parser::parseFnDecl(bool isPublic) {
    expect(StmtType::fnDecl, TokenType::rparen);
    advance();
 
-   NodeId program = parseProgram();
-   return arena.allocateFnDecl(isPublic, identifier, program, parameters, line());
+   std::vector<NodeId> nodes;
+   size_t programLine = line();
+   
+   while (!is(TokenType::kend)) {
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated function declaration.");
+      }
+      
+      NodeId node = parseStmt();
+      nodes.push_back(node);
+   }
+
+   advance();
+   NodeId program = arena.allocateProgram(nodes, programLine);
+   return arena.allocateFnDecl(isPublic, identifier, program, parameters, originalLine);
 }
 
 NodeId Parser::parseEnumDecl(bool isPublic) {
+   size_t originalLine = line();
    advance();
-   expect(StmtType::enumDecl, TokenType::identifier);
 
+   expect(StmtType::enumDecl, TokenType::identifier);
    std::string identifier = current().lexeme;
    std::vector<NodeId> entries;
 
    do {
       advance();
-      if (current().type == TokenType::kend) {
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated enumeration declaration.");
+      }
+
+      if (is(TokenType::kend)) {
          break;
       }
 
@@ -103,7 +137,7 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
       NodeId value = null;
 
       advance();
-      if (current().type == TokenType::lparen) {
+      if (is(TokenType::lparen)) {
          do {
             advance();
             if (is(TokenType::rparen)) {
@@ -121,7 +155,7 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
          advance();
       }
 
-      if (current().type == TokenType::equals) {
+      if (is(TokenType::equals)) {
          advance();
          value = parseExpr();
       }
@@ -132,7 +166,77 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
 
    expect(StmtType::enumDecl, TokenType::kend);
    advance();
-   return arena.allocateEnumDecl(isPublic, identifier, entries, line());
+   return arena.allocateEnumDecl(isPublic, identifier, entries, originalLine);
+}
+
+NodeId Parser::parseStructDecl(bool isPublic) {
+   size_t originalLine = line();
+   advance();
+
+   expect(StmtType::structDecl, TokenType::identifier);
+   std::string identifier = current().lexeme;
+   std::vector<NodeId> variables;
+
+   do {
+      advance();
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated struct declaration.");
+      }
+
+      if (is(TokenType::kend)) {
+         break;
+      }
+
+      expect(StmtType::structDecl, TokenType::identifier);
+
+      NodeId identifier = parsePrimaryExpr();
+      variables.push_back(identifier);
+   } while (is(TokenType::comma));
+
+   expect(StmtType::structDecl, TokenType::kend);
+   advance();
+   return arena.allocateStructDecl(isPublic, identifier, variables, originalLine);
+}
+
+NodeId Parser::parseIfStmt() {
+   size_t originalLine = line();
+   NodeId ifClause = parseIfClause();
+   std::vector<NodeId> elifClauses;
+
+   while (is(TokenType::kelif)) {
+      NodeId elifClause = parseIfClause();
+      elifClauses.push_back(elifClause);
+   }
+
+   NodeId elseClause = null;
+   if (is(TokenType::kelse)) {
+      elseClause = parseIfClause();
+   }
+
+   expect(StmtType::ifStmt, TokenType::kend);
+   advance();
+   return arena.allocateIfStmt(ifClause, elifClauses, elseClause, originalLine);
+}
+
+NodeId Parser::parseIfClause() {
+   size_t originalLine = line();
+   TokenType keyword = current().type;
+   advance();
+
+   NodeId expression = (keyword == TokenType::kelse ? null : parseExpr());
+   size_t programLine = line();
+   std::vector<NodeId> nodes;
+
+   while (!is(TokenType::kend) && !is(TokenType::kelif) && !is(TokenType::kelse)) {
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated %s statement.", getTokenTypeAsString(keyword));
+      }
+      NodeId node = parseStmt();
+      nodes.push_back(node);
+   }
+
+   NodeId program = arena.allocateProgram(nodes, programLine);
+   return arena.allocateIfClause(keyword, expression, program, originalLine);
 }
 
 // expressions
@@ -210,19 +314,6 @@ NodeId Parser::parsePrimaryExpr() {
    }
 }
 
-NodeId Parser::parseProgram() {
-   std::vector<NodeId> nodes;
-   size_t originalLine = line();
-   
-   while (current().type != TokenType::kend) {
-      NodeId node = parseStmt();
-      nodes.push_back(node);
-   }
-
-   advance();
-   return arena.allocateProgram(nodes, originalLine);
-}
-
 // utility
 
 void Parser::advance() {
@@ -251,8 +342,5 @@ Token &Parser::current() {
 }
 
 size_t Parser::line() {
-   if (index == 0) {
-      return tokens[index].line;
-   }
-   return tokens[index - 1].line;
+   return tokens[index].line;
 }

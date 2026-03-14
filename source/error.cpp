@@ -25,7 +25,7 @@ void raiseError(unsigned line, const char *error, ...) {
          previousText = temp;
       } else if (index == line) {
          currentText = temp;
-      } else if (index > line && nextText.empty()) {
+      } else if (index > line && !temp.empty() && nextText.empty()) {
          nextText = temp;
          nextLine = index;
          break;
