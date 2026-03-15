@@ -48,7 +48,7 @@ void ASTArena::printList(NodeList list, int indentation) const {
 
 void ASTArena::print(NodeId id, int indentation) const {
    const Node &node = get(id);
-   printf("\n%*s%s: ", indentation, "", getStatementTypeAsString(node.type));
+   printf("\n%*s[%lu] %s: ", indentation, "", node.line, getStatementTypeAsString(node.type));
 
    switch (node.type) {
      case StmtType::varDecl: {
@@ -145,12 +145,21 @@ void ASTArena::print(NodeId id, int indentation) const {
       break;
    } case StmtType::property: {
       print(node.property.left, indentation + 1);
-      printList(node.property.right, indentation + 1);
+      printf("\n%*sAccess: %s", indentation + 1, "", strings[node.property.right].c_str());
+      break;
+   } case StmtType::arraySubscript: {
+      print(node.arraySubscript.left, indentation + 1);
+      print(node.arraySubscript.expression, indentation + 1);
       break;
    } case StmtType::call: {
-      printf("%s:", strings[node.fnCall.identifier].c_str());
+      print(node.fnCall.left, indentation + 1);
       printf("\n%*sArguments:", indentation + 1, "");
       printList(node.fnCall.args, indentation + 2);
+      break;
+   } case StmtType::range: {
+      printf("%*s%s:", indentation + 1, "", (node.range.inclusive ? "to" : "until"));
+      print(node.range.left, indentation + 2);
+      print(node.range.right, indentation + 2);
       break;
    } case StmtType::enumEntry: {
       printf("%s:", strings[node.enumEntry.identifier].c_str());
@@ -318,15 +327,27 @@ NodeId ASTArena::allocateUnary(NodeId value, TokenType op, size_t line) {
    return allocate(node);
 }
 
-NodeId ASTArena::allocatePropertyAccess(NodeId left, const std::vector<NodeId> &right, size_t line) {
+NodeId ASTArena::allocatePropertyAccess(NodeId left, const std::string &right, size_t line) {
    Node node {StmtType::property, line};
-   node.property = {left, pushVector(right)};
+   node.property = {left, pushString(right)};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateFnCall(const std::string &identifier, const std::vector<NodeId> &args, size_t line) {
+NodeId ASTArena::allocateArraySubscript(NodeId left, NodeId expression, size_t line) {
+   Node node {StmtType::arraySubscript, line};
+   node.arraySubscript = {left, expression};
+   return allocate(node);
+}
+
+NodeId ASTArena::allocateFnCall(NodeId left, const std::vector<NodeId> &args, size_t line) {
    Node node {StmtType::call, line};
-   node.fnCall = {pushString(identifier), pushVector(args)};
+   node.fnCall = {left, pushVector(args)};
+   return allocate(node);
+}
+
+NodeId ASTArena::allocateRange(bool inclusive, NodeId left, NodeId right, size_t line) {
+   Node node {StmtType::range, line};
+   node.range = {inclusive, left, right};
    return allocate(node);
 }
 

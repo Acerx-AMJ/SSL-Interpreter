@@ -11,14 +11,12 @@ std::vector<Token> &Lexer::lex() {
          continue;
       }
 
-      // single comments
       if (ch == '/' && peek() == '/') {
          line += 1;
          while (index < code.size() && ch != '\n') {
             ch = advance();
          }
       }
-      // block comments
       else if (ch == '/' && peek() == '*') {
          size_t indent = 1;
          size_t originalLine = line;
@@ -36,7 +34,6 @@ std::vector<Token> &Lexer::lex() {
             raiseError(originalLine, "Unterminated block comment.");
          }
       }
-      // numbers
       else if (isdigit(ch)) {
          std::string number;
          bool dot = false, lastDash = false;
@@ -45,13 +42,15 @@ std::vector<Token> &Lexer::lex() {
             if (isdigit(ch)) {
                lastDash = false;
                number.push_back(ch);
-            } else if (ch == '.') {
+            }
+            else if (ch == '.') {
                if (dot || !isdigit(peek())) {
                   break;
                }
                dot = true;
                number.push_back(ch);
-            } else if (ch != '\'') {
+            }
+            else if (ch != '\'') {
                break;
             }
             
@@ -72,7 +71,6 @@ std::vector<Token> &Lexer::lex() {
          pushToken(TokenType::number, number, line);
          index -= 1;
       }
-      // strings
       else if (ch == '"' || ch == '\'') {
          std::string string;
          char end = ch;
@@ -94,7 +92,6 @@ std::vector<Token> &Lexer::lex() {
          }
          pushToken(TokenType::string, string, originalLine);
       }
-      // identifiers
       else if (isalpha(ch) || ch == '_') {
          std::string identifier;
 
@@ -105,12 +102,12 @@ std::vector<Token> &Lexer::lex() {
 
          if (auto it = keywords.find(identifier); it != keywords.end()) {
             pushToken(it->second, identifier, line);
-         } else {
+         }
+         else {
             pushToken(TokenType::identifier, identifier, line);
          }
          index -= 1;
       }
-      // operators
       else {
          std::string op;
 

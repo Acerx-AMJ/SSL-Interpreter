@@ -27,6 +27,7 @@ struct Parser {
    NodeId parseUnless(NodeId statement);
    NodeId parseImport();
 
+   NodeId parseRangeExpr();
    NodeId parseExpr();
    NodeId parseAssignmentExpr();
    NodeId parseLogicalOrExpr();
@@ -37,10 +38,7 @@ struct Parser {
    NodeId parseMultiplicativeExpr();
    NodeId parseExponentiativeExpr();
    NodeId parseUnaryExpr();
-   NodeId parseReverseUnaryExpr();
-   NodeId parsePropertyAccess();
-   NodeId parseRangeExpr();
-   NodeId parseCallExpr();
+   NodeId parsePostfixExpr();
    NodeId parsePrimaryExpr();
 
    // utility

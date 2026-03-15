@@ -10,7 +10,7 @@ enum class StmtType: char {
    ifStmt, ifClause, matchStmt,
    forLoop, loop, whileLoop, doWhileLoop, breakStmt, continueStmt,
    returnStmt, unlessStmt, doStmt, importStmt,
-   assignment, binary, unary, property, call,
+   assignment, binary, unary, property, arraySubscript, call, range,
    enumEntry, identifier, number, string, array, null, program,
 };
 
@@ -19,8 +19,8 @@ constexpr const char *statementTypeStrings[] {
    "Structure Declaration", "If Statement", "If Clause", "Match Statement", "For Loop",
    "Loop", "While Loop", "Do While Loop", "Break Statement", "Continue Statement",
    "Return Statement", "Unless Statement", "Do Statement", "Import Statement", "Assignment",
-   "Binary Expression", "Unary Expression", "Property Access", "Function Call", "Enumeration Entry",
-   "Identifier", "Number", "String", "Array", "Null", "Scope",
+   "Binary Expression", "Unary Expression", "Property Access", "Array Subscript", "Function Call",
+   "Range", "Enumeration Entry", "Identifier", "Number", "String", "Array", "Null", "Scope",
 };
 
 constexpr const char *getStatementTypeAsString(StmtType type) {
@@ -145,12 +145,23 @@ struct UnaryExpr {
 
 struct PropertyAccess {
    NodeId left;
-   NodeList right;
+   StringId right;
+};
+
+struct ArraySubscript {
+   NodeId left;
+   NodeId expression;
 };
 
 struct FunctionCall {
-   StringId identifier;
+   NodeId left;
    NodeList args;
+};
+
+struct Range {
+   bool inclusive;
+   NodeId left;
+   NodeId right;
 };
 
 struct EnumEntry {
@@ -211,7 +222,9 @@ struct Node {
       BinaryExpr binary;
       UnaryExpr unary;
       PropertyAccess property;
+      ArraySubscript arraySubscript;
       FunctionCall fnCall;
+      Range range;
       EnumEntry enumEntry;
       IdentifierLiteral identifier;
       NumberLiteral number;
@@ -259,8 +272,10 @@ struct ASTArena {
    NodeId allocateAssignment(NodeId left, NodeId right, TokenType op, size_t line);
    NodeId allocateBinary(NodeId left, NodeId right, TokenType op, size_t line);
    NodeId allocateUnary(NodeId value, TokenType op, size_t line);
-   NodeId allocatePropertyAccess(NodeId left, const std::vector<NodeId> &right, size_t line);
-   NodeId allocateFnCall(const std::string &identifier, const std::vector<NodeId> &args, size_t line);
+   NodeId allocatePropertyAccess(NodeId left, const std::string &right, size_t line);
+   NodeId allocateArraySubscript(NodeId left, NodeId expression, size_t line);
+   NodeId allocateFnCall(NodeId left, const std::vector<NodeId> &args, size_t line);
+   NodeId allocateRange(bool inclusive, NodeId left, NodeId right, size_t line);
    NodeId allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, const std::vector<NodeId> &argValues, size_t line);
    NodeId allocateIdentifier(const std::string &string, size_t line);
    NodeId allocateNumber(long double number, size_t line);

@@ -27,7 +27,8 @@ NodeId Parser::parseStmt() {
    if (keyword == TokenType::kpub) {
       wasPublicModifierSet = true;
       advance();
-   } else if (keyword == TokenType::kprv) {
+   }
+   else if (keyword == TokenType::kprv) {
       wasPublicModifierSet = true;
       isPublic = false;
       advance();
@@ -36,11 +37,14 @@ NodeId Parser::parseStmt() {
    keyword = current().type;
    if (peek(TokenType::colonEquals)) {
       return parseVarDecl(isPublic);
-   } else if (keyword == TokenType::kfn) {
+   }
+   else if (keyword == TokenType::kfn) {
       return parseFnDecl(isPublic);
-   } else if (keyword == TokenType::kenum) {
+   }
+   else if (keyword == TokenType::kenum) {
       return parseEnumDecl(isPublic);
-   } else if (keyword == TokenType::kstruct) {
+   }
+   else if (keyword == TokenType::kstruct) {
       return parseStructDecl(isPublic);
    }
 
@@ -51,23 +55,32 @@ NodeId Parser::parseStmt() {
 
    if (keyword == TokenType::kif) {
       return parseIfStmt();
-   } else if (keyword == TokenType::kmatch) {
+   }
+   else if (keyword == TokenType::kmatch) {
       return parseMatchStmt();
-   } else if (keyword == TokenType::kdo) {
+   }
+   else if (keyword == TokenType::kdo) {
       return parseDoWhileLoopOrNewScope();
-   } else if (keyword == TokenType::kwhile) {
+   }
+   else if (keyword == TokenType::kwhile) {
       return parseWhileLoop();
-   } else if (keyword == TokenType::kloop) {
+   }
+   else if (keyword == TokenType::kloop) {
       return parseLoop();
-   } else if (keyword == TokenType::kfor) {
+   }
+   else if (keyword == TokenType::kfor) {
       return parseForLoop();
-   } else if (keyword == TokenType::kbreak) {
+   }
+   else if (keyword == TokenType::kbreak) {
       return parseBreak();
-   } else if (keyword == TokenType::kcontinue) {
+   }
+   else if (keyword == TokenType::kcontinue) {
       return parseContinue();
-   } else if (keyword == TokenType::kreturn) {
+   }
+   else if (keyword == TokenType::kreturn) {
       return parseReturn();
-   } else if (keyword == TokenType::kimport) {
+   }
+   else if (keyword == TokenType::kimport) {
       return parseImport();
    }
    return parseExpr();
@@ -239,7 +252,14 @@ NodeId Parser::parseIfClause() {
    TokenType keyword = current().type;
    advance();
 
-   NodeId expression = (keyword == TokenType::kelse ? null : parseExpr());
+   NodeId expression = null;
+   if (keyword == TokenType::kcase) {
+      expression = parseRangeExpr();
+   }
+   else if (keyword != TokenType::kelse) {
+      expression = parseExpr();
+   }
+   
    size_t programLine = line();
    std::vector<NodeId> nodes;
 
@@ -294,7 +314,7 @@ NodeId Parser::parseForLoop() {
    expect(StmtType::forLoop, TokenType::kin);
    advance();
 
-   NodeId expression = parseExpr();
+   NodeId expression = parseRangeExpr();
    std::vector<NodeId> nodes;
    size_t programLine = line();
 
@@ -436,7 +456,8 @@ NodeId Parser::parseImport() {
          NodeId identifier = parsePrimaryExpr();
          values.push_back(identifier);
       } while (is(TokenType::comma));
-   } else {
+   }
+   else {
       advance();
       advance();
    }
@@ -459,6 +480,19 @@ NodeId Parser::parseImport() {
 }
 
 // expressions
+
+NodeId Parser::parseRangeExpr() {
+   size_t originalLine = line();
+   NodeId left = parseExpr();
+
+   if (is(TokenType::kto) || is(TokenType::kuntil)) {
+      bool inclusive = is(TokenType::kto);
+      advance();
+      NodeId right = parseExpr();
+      left = arena.allocateRange(inclusive, left, right, originalLine);
+   }
+   return left;
+}
 
 NodeId Parser::parseExpr() {
    return parseAssignmentExpr();
@@ -567,7 +601,7 @@ NodeId Parser::parseMultiplicativeExpr() {
 
 NodeId Parser::parseExponentiativeExpr() {
    size_t originalLine = line();
-   NodeId left = parsePrimaryExpr();
+   NodeId left = parseUnaryExpr();
 
    if (is(TokenType::pow)) {
       TokenType op = current().type;
@@ -579,33 +613,157 @@ NodeId Parser::parseExponentiativeExpr() {
    return left;
 }
 
+NodeId Parser::parseUnaryExpr() {
+   if (is(TokenType::plus) || is(TokenType::minus) || is(TokenType::reference)
+    || is(TokenType::knot)) {
+      size_t originalLine = line();
+      TokenType op = current().type;
+
+      advance();
+      NodeId value = parseUnaryExpr();
+      return arena.allocateUnary(value, op, originalLine);
+   }
+   return parsePostfixExpr();
+}
+
+NodeId Parser::parsePostfixExpr() {
+   size_t originalLine = line();
+   NodeId left = parsePrimaryExpr();
+
+   while (true) {
+      if (is(TokenType::dot)) {
+         advance();
+
+         expect(StmtType::property, TokenType::identifier);
+         std::string identifier = current().lexeme;
+         advance();
+
+         left = arena.allocatePropertyAccess(left, identifier, originalLine);
+      }
+      else if (is(TokenType::lbracket)) {
+         advance();
+         NodeId subscript = parseExpr();
+
+         expect(StmtType::arraySubscript, TokenType::rbracket);
+         advance();
+
+         left = arena.allocateArraySubscript(left, subscript, originalLine);
+      }
+      else if (is(TokenType::lparen)) {
+         std::vector<NodeId> arguments;
+
+         do {
+            advance();
+            if (is(TokenType::rparen)) {
+               break;
+            }
+
+            NodeId argument = parseExpr();
+            arguments.push_back(argument);
+         } while (is(TokenType::comma));
+
+         expect(StmtType::call, TokenType::rparen);
+         advance();
+
+         left = arena.allocateFnCall(left, arguments, originalLine);
+      }
+      else {
+         break;
+      }
+      originalLine = line();
+   }
+   return left;
+}
+
 NodeId Parser::parsePrimaryExpr() {
-   // numbers
    if (is(TokenType::number)) {
+      size_t originalLine = line();
       long double number = 0.0;
 
       try {
          number = std::stold(current().lexeme);
-      } catch (...) {
-         raiseError(line(), "Failed to convert string '%s' to number. It might be too large, "
+      }
+      catch (...) {
+         raiseError(originalLine, "Failed to convert string '%s' to number. It might be too large, "
                             "too small or invalid.", current().lexeme.c_str());
       }
       advance();
-      return arena.allocateNumber(number, line());
+      return arena.allocateNumber(number, originalLine);
    }
-   // identifiers
    else if (is(TokenType::identifier)) {
       Token &token = current();
       advance();
-      return arena.allocateIdentifier(token.lexeme, line());
+      return arena.allocateIdentifier(token.lexeme, token.line);
    }
-   // strings
    else if (is(TokenType::string)) {
       Token &token = current();
       advance();
-      return arena.allocateString(token.lexeme, line());
+      return arena.allocateString(token.lexeme, token.line);
    }
-   // unexpected expression
+   else if (is(TokenType::lparen)) {
+      size_t originalLine = line();
+      advance();
+
+      NodeId expression = parseExpr();
+      expect(StmtType::program, TokenType::rparen);
+      advance();
+      return expression;
+   }
+   else if (is(TokenType::lbracket)) {
+      size_t originalLine = line();
+      std::vector<NodeId> values;
+
+      do {
+         advance();
+         if (is(TokenType::rbracket)) {
+            break;
+         }
+
+         NodeId value = parseExpr();
+         values.push_back(value);
+      } while (is(TokenType::comma));
+
+      expect(StmtType::array, TokenType::rbracket);
+      advance();
+      return arena.allocateArray(values, originalLine);
+   }
+   else if (is(TokenType::klambda)) {
+      size_t originalLine = line();
+      advance();
+      expect(StmtType::lambda, TokenType::lparen);
+      std::vector<NodeId> parameters;
+
+      do {
+         advance();
+         if (is(TokenType::rparen)) {
+            break;
+         }
+
+         expect(StmtType::lambda, TokenType::identifier);
+
+         NodeId identifier = parsePrimaryExpr();
+         parameters.push_back(identifier);
+      } while (is(TokenType::comma));
+
+      expect(StmtType::lambda, TokenType::rparen);
+      advance();
+
+      std::vector<NodeId> nodes;
+      size_t programLine = line();
+      
+      while (!is(TokenType::kend)) {
+         if (is(TokenType::eof)) {
+            raiseError(originalLine, "Unterminated lambda declaration.");
+         }
+         
+         NodeId node = parseStmt();
+         nodes.push_back(node);
+      }
+
+      advance();
+      NodeId program = arena.allocateProgram(nodes, programLine);
+      return arena.allocateLambda(program, parameters, originalLine);
+   }
    else {
       raiseError(line(), "Expected primary expression, got '%s' instead.",
          getTokenTypeAsString(current().type));

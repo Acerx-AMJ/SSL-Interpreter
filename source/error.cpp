@@ -23,9 +23,11 @@ void raiseError(unsigned line, const char *error, ...) {
       if (index < line && !temp.empty()) {
          previousLine = index;
          previousText = temp;
-      } else if (index == line) {
+      }
+      else if (index == line) {
          currentText = temp;
-      } else if (index > line && !temp.empty() && nextText.empty()) {
+      }
+      else if (index > line && !temp.empty() && nextText.empty()) {
          nextText = temp;
          nextLine = index;
          break;

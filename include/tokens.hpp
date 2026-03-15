@@ -6,11 +6,11 @@
 
 enum class TokenType: char {
    eof, identifier, number, string,
-   increment, decrement, colonEquals, equals, plusEquals, minusEquals, starEquals, slashEquals,
+   colonEquals, equals, plusEquals, minusEquals, starEquals, slashEquals,
    modEquals, powEquals, plus, minus, star, slash, mod, pow,
    divisible, equalsEquals, notEquals, bigger, biggerEquals, smaller, smallerEquals,
    lparen, rparen, lbracket, rbracket, lbrace, rbrace, comma, reference, dot,
-   none, kand, kor, knot,
+   kand, kor, knot,
    kif, kelif, kelse, kend, kmatch, kcase,
    kenum, kfn, klambda, kstruct,
    kfor, kin, kto, kuntil, kloop, kwhile, kdo,
@@ -20,11 +20,11 @@ enum class TokenType: char {
 
 constexpr const char *tokenTypeStrings[] {
    "EOF", "Identifier", "Number", "String",
-   "++", "--", ":=", "=", "+=", "-=", "*=", "/=", "%=", "**=",
-   "+", "-", "*", "/", "%", "**",
+   ":=", "=", "+=", "-=", "*=", "/=",
+   "%=", "**=", "+", "-", "*", "/", "%", "**",
    "%%", "==", "!=", ">", ">=", "<", "<=",
    "(", ")", "{", "}", "[", "]", ",", "&", ".",
-   "none", "and", "or", "not",
+   "and", "or", "not",
    "if", "elif", "else", "end", "match", "case",
    "enum", "fn", "lambda", "struct",
    "for", "in", "to", "until", "loop", "while", "do",
@@ -44,8 +44,6 @@ struct Token {
 
 static inline constexpr size_t maxOperatorSize = 3;
 static inline const std::unordered_map<std::string_view, TokenType> operators {
-   {"++",  TokenType::increment},
-   {"--",  TokenType::decrement},
    {":=",  TokenType::colonEquals},
    {"=",   TokenType::equals},
    {"+=",  TokenType::plusEquals},
@@ -69,10 +67,10 @@ static inline const std::unordered_map<std::string_view, TokenType> operators {
    {"<=",  TokenType::smallerEquals},
    {"(",   TokenType::lparen},
    {")",   TokenType::rparen},
-   {"{",   TokenType::lbracket},
-   {"}",   TokenType::rbracket},
-   {"[",   TokenType::lbrace},
-   {"]",   TokenType::rbrace},
+   {"{",   TokenType::lbrace},
+   {"}",   TokenType::rbrace},
+   {"[",   TokenType::lbracket},
+   {"]",   TokenType::rbracket},
    {",",   TokenType::comma},
    {"&",   TokenType::reference},
    {".",   TokenType::dot},
