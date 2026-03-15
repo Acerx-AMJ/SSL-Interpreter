@@ -104,14 +104,27 @@ NodeId Parser::parseFnDecl(bool isPublic) {
    advance();
 
    expect(StmtType::fnDecl, TokenType::identifier);
-   std::string identifier = current().lexeme;
-
+   std::string module, identifier = current().lexeme;
    advance();
+
+   if (is(TokenType::dot)) {
+      advance();
+      expect(StmtType::fnDecl, TokenType::identifier);
+
+      std::swap(module, identifier);
+      identifier = current().lexeme;
+      advance();
+   }
+
    expect(StmtType::fnDecl, TokenType::lparen);
    std::vector<NodeId> parameters;
 
    do {
       advance();
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated function parameter list.");
+      }
+
       if (is(TokenType::rparen)) {
          break;
       }
@@ -126,8 +139,6 @@ NodeId Parser::parseFnDecl(bool isPublic) {
    advance();
 
    std::vector<NodeId> nodes;
-   size_t programLine = line();
-   
    while (!is(TokenType::kend)) {
       if (is(TokenType::eof)) {
          raiseError(originalLine, "Unterminated function declaration.");
@@ -138,8 +149,7 @@ NodeId Parser::parseFnDecl(bool isPublic) {
    }
 
    advance();
-   NodeId program = arena.allocateProgram(nodes, programLine);
-   return arena.allocateFnDecl(isPublic, identifier, program, parameters, originalLine);
+   return arena.allocateFnDecl(isPublic, module, identifier, nodes, parameters, originalLine);
 }
 
 NodeId Parser::parseEnumDecl(bool isPublic) {
@@ -152,6 +162,8 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
 
    do {
       advance();
+      size_t entryLine = line();
+      
       if (is(TokenType::eof)) {
          raiseError(originalLine, "Unterminated enumeration declaration.");
       }
@@ -161,7 +173,7 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
       }
 
       expect(StmtType::enumDecl, TokenType::identifier);
-      std::vector<NodeId> args, argValues;
+      std::vector<NodeId> args;
       std::string identifier = current().lexeme;
       NodeId value = null;
 
@@ -177,7 +189,6 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
             NodeId identifier = parsePrimaryExpr();
 
             args.push_back(identifier);
-            argValues.push_back(null);
          } while (is(TokenType::comma));
 
          expect(StmtType::enumDecl, TokenType::rparen);
@@ -189,7 +200,7 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
          value = parseExpr();
       }
       
-      NodeId entry = arena.allocateEnumEntry(identifier, value, args, argValues, line());
+      NodeId entry = arena.allocateEnumEntry(identifier, value, args, entryLine);
       entries.push_back(entry);
    } while (is(TokenType::comma));
 
@@ -252,16 +263,15 @@ NodeId Parser::parseIfClause() {
    TokenType keyword = current().type;
    advance();
 
+   std::vector<NodeId> nodes;
    NodeId expression = null;
+
    if (keyword == TokenType::kcase) {
       expression = parseRangeExpr();
    }
    else if (keyword != TokenType::kelse) {
       expression = parseExpr();
    }
-   
-   size_t programLine = line();
-   std::vector<NodeId> nodes;
 
    while (!is(TokenType::kend) && !is(TokenType::kelif) && !is(TokenType::kelse)
        && !is(TokenType::kcase)) {
@@ -272,9 +282,7 @@ NodeId Parser::parseIfClause() {
       NodeId node = parseStmt();
       nodes.push_back(node);
    }
-
-   NodeId program = arena.allocateProgram(nodes, programLine);
-   return arena.allocateIfClause(keyword, expression, program, originalLine);
+   return arena.allocateIfClause(keyword, expression, nodes, originalLine);
 }
 
 NodeId Parser::parseMatchStmt() {
@@ -316,7 +324,6 @@ NodeId Parser::parseForLoop() {
 
    NodeId expression = parseRangeExpr();
    std::vector<NodeId> nodes;
-   size_t programLine = line();
 
    while (!is(TokenType::kend)) {
       if (is(TokenType::eof)) {
@@ -328,16 +335,13 @@ NodeId Parser::parseForLoop() {
    }
 
    advance();
-   NodeId program = arena.allocateProgram(nodes, programLine);
-   return arena.allocateForLoop(identifier, expression, program, originalLine);
+   return arena.allocateForLoop(identifier, expression, nodes, originalLine);
 }
 
 NodeId Parser::parseLoop() {
    size_t originalLine = line();
-   advance();
-
    std::vector<NodeId> nodes;
-   size_t programLine = line();
+   advance();
 
    while (!is(TokenType::kend)) {
       if (is(TokenType::eof)) {
@@ -349,8 +353,7 @@ NodeId Parser::parseLoop() {
    }
 
    advance();
-   NodeId program = arena.allocateProgram(nodes, programLine);
-   return arena.allocateLoop(program, originalLine);
+   return arena.allocateLoop(nodes, originalLine);
 }
 
 NodeId Parser::parseWhileLoop() {
@@ -359,7 +362,6 @@ NodeId Parser::parseWhileLoop() {
 
    NodeId expression = parseExpr();
    std::vector<NodeId> nodes;
-   size_t programLine = line();
 
    while (!is(TokenType::kend)) {
       if (is(TokenType::eof)) {
@@ -371,16 +373,13 @@ NodeId Parser::parseWhileLoop() {
    }
 
    advance();
-   NodeId program = arena.allocateProgram(nodes, programLine);
-   return arena.allocateWhileLoop(expression, program, originalLine);
+   return arena.allocateWhileLoop(expression, nodes, originalLine);
 }
 
 NodeId Parser::parseDoWhileLoopOrNewScope() {
    size_t originalLine = line();
-   advance();
-
    std::vector<NodeId> nodes;
-   size_t programLine = line();
+   advance();
 
    while (!is(TokenType::kend) && !is(TokenType::kwhile)) {
       if (is(TokenType::eof)) {
@@ -391,15 +390,14 @@ NodeId Parser::parseDoWhileLoopOrNewScope() {
       nodes.push_back(node);
    }
 
-   NodeId program = arena.allocateProgram(nodes, programLine);
    if (is(TokenType::kend)) {
       advance();
-      return arena.allocateDoStmt(program, originalLine);
+      return arena.allocateProgram(nodes, originalLine);
    }
 
    advance();
    NodeId expression = parseExpr();
-   return arena.allocateDoWhileLoop(expression, program, originalLine);
+   return arena.allocateDoWhileLoop(expression, nodes, originalLine);
 }
 
 NodeId Parser::parseBreak() {
@@ -500,7 +498,7 @@ NodeId Parser::parseExpr() {
 
 NodeId Parser::parseAssignmentExpr() {
    size_t originalLine = line();
-   NodeId left = parseLogicalOrExpr();
+   NodeId left = parseNullCoalesceExpr();
 
    if (is(TokenType::equals) || is(TokenType::plusEquals) || is(TokenType::minusEquals)
     || is(TokenType::starEquals) || is(TokenType::slashEquals) || is(TokenType::modEquals)
@@ -510,6 +508,20 @@ NodeId Parser::parseAssignmentExpr() {
 
       NodeId right = parseAssignmentExpr();
       left = arena.allocateAssignment(left, right, op, originalLine);
+   }
+   return left;
+}
+
+NodeId Parser::parseNullCoalesceExpr() {
+   size_t originalLine = line();
+   NodeId left = parseLogicalOrExpr();
+
+   if (is(TokenType::nullOr)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseNullCoalesceExpr();
+      return arena.allocateBinary(left, right, op, originalLine);
    }
    return left;
 }
@@ -631,29 +643,44 @@ NodeId Parser::parsePostfixExpr() {
    NodeId left = parsePrimaryExpr();
 
    while (true) {
-      if (is(TokenType::dot)) {
+      if (is(TokenType::dot) || is(TokenType::nullDot)) {
+         bool nullChecked = is(TokenType::nullDot);
          advance();
 
          expect(StmtType::property, TokenType::identifier);
          std::string identifier = current().lexeme;
          advance();
 
-         left = arena.allocatePropertyAccess(left, identifier, originalLine);
+         left = arena.allocatePropertyAccess(nullChecked, left, identifier, originalLine);
       }
       else if (is(TokenType::lbracket)) {
-         advance();
-         NodeId subscript = parseExpr();
+         do {
+            advance();
+            if (is(TokenType::eof)) {
+               raiseError(originalLine, "Unterminated array subscript.");
+            }
+
+            if (is(TokenType::rbracket)) {
+               break;
+            }
+
+            NodeId subscript = parseExpr();
+            left = arena.allocateArraySubscript(left, subscript, originalLine);
+            originalLine = line();
+         } while (is(TokenType::comma));
 
          expect(StmtType::arraySubscript, TokenType::rbracket);
          advance();
-
-         left = arena.allocateArraySubscript(left, subscript, originalLine);
       }
       else if (is(TokenType::lparen)) {
          std::vector<NodeId> arguments;
 
          do {
             advance();
+            if (is(TokenType::eof)) {
+               raiseError(originalLine, "Unterminated function call argument list.");
+            }
+            
             if (is(TokenType::rparen)) {
                break;
             }
@@ -715,6 +742,10 @@ NodeId Parser::parsePrimaryExpr() {
 
       do {
          advance();
+         if (is(TokenType::eof)) {
+            raiseError(originalLine, "Unterminated array.");
+         }
+
          if (is(TokenType::rbracket)) {
             break;
          }
@@ -735,6 +766,10 @@ NodeId Parser::parsePrimaryExpr() {
 
       do {
          advance();
+         if (is(TokenType::eof)) {
+            raiseError(originalLine, "Unterminated lambda parameter list.");
+         }
+
          if (is(TokenType::rparen)) {
             break;
          }
@@ -745,11 +780,9 @@ NodeId Parser::parsePrimaryExpr() {
          parameters.push_back(identifier);
       } while (is(TokenType::comma));
 
+      std::vector<NodeId> nodes;
       expect(StmtType::lambda, TokenType::rparen);
       advance();
-
-      std::vector<NodeId> nodes;
-      size_t programLine = line();
       
       while (!is(TokenType::kend)) {
          if (is(TokenType::eof)) {
@@ -761,8 +794,7 @@ NodeId Parser::parsePrimaryExpr() {
       }
 
       advance();
-      NodeId program = arena.allocateProgram(nodes, programLine);
-      return arena.allocateLambda(program, parameters, originalLine);
+      return arena.allocateLambda(nodes, parameters, originalLine);
    }
    else {
       raiseError(line(), "Expected primary expression, got '%s' instead.",

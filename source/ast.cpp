@@ -48,7 +48,7 @@ void ASTArena::printList(NodeList list, int indentation) const {
 
 void ASTArena::print(NodeId id, int indentation) const {
    const Node &node = get(id);
-   printf("\n%*s[%lu] %s: ", indentation, "", node.line, getStatementTypeAsString(node.type));
+   printf("\n%*s %s[%lu]: ", indentation, "", getStatementTypeAsString(node.type), node.line);
 
    switch (node.type) {
      case StmtType::varDecl: {
@@ -56,15 +56,17 @@ void ASTArena::print(NodeId id, int indentation) const {
       print(node.varDecl.value, indentation + 1);
       break;
    } case StmtType::fnDecl: {
-      printf("%s:", strings[node.fnDecl.identifier].c_str());
+      printf("%s.%s:", strings[node.fnDecl.module].c_str(), strings[node.fnDecl.identifier].c_str());
       printf("\n%*sParameters:", indentation + 1, "");
       printList(node.fnDecl.parameters, indentation + 1);
-      print(node.fnDecl.body, indentation + 1);
+      printf("\n%*sScope:", indentation + 1, "");
+      printList(node.fnDecl.body, indentation + 1);
       break;
    } case StmtType::lambda: {
       printf("\n%*sParameters:", indentation + 1, "");
       printList(node.lambda.parameters, indentation + 1);
-      print(node.lambda.body, indentation + 1);
+      printf("\n%*sScope:", indentation + 1, "");
+      printList(node.lambda.body, indentation + 1);
       break;
    } case StmtType::enumDecl: {
       printf("%s:", strings[node.enumDecl.identifier].c_str());
@@ -84,7 +86,8 @@ void ASTArena::print(NodeId id, int indentation) const {
    } case StmtType::ifClause: {
       printf("%s:", getTokenTypeAsString(node.ifClause.keyword));
       print(node.ifClause.expression, indentation + 1);
-      print(node.ifClause.statement, indentation + 1);
+      printf("\n%*sScope:", indentation + 1, "");
+      printList(node.ifClause.statement, indentation + 1);
       break;
    } case StmtType::matchStmt: {
       printf("\n%*sExpression:", indentation + 1, "");
@@ -96,18 +99,22 @@ void ASTArena::print(NodeId id, int indentation) const {
    } case StmtType::forLoop: {
       printf("%s:", strings[node.forLoop.identifier].c_str());
       print(node.forLoop.inExpression, indentation + 1);
-      print(node.forLoop.body, indentation + 1);
+      printf("\n%*sScope:", indentation + 1, "");
+      printList(node.forLoop.body, indentation + 1);
       break;
    } case StmtType::loop: {
-      print(node.loop.body, indentation + 1);
+      printf("\n%*sScope:", indentation + 1, "");
+      printList(node.loop.body, indentation + 1);
       break;
    } case StmtType::whileLoop: {
       print(node.whileLoop.expression, indentation + 1);
-      print(node.whileLoop.statement, indentation + 1);
+      printf("\n%*sScope:", indentation + 1, "");
+      printList(node.whileLoop.statement, indentation + 1);
       break;
    } case StmtType::doWhileLoop: {
       print(node.doWhileLoop.expression, indentation + 1);
-      print(node.doWhileLoop.statement, indentation + 1);
+      printf("\n%*sScope:", indentation + 1, "");
+      printList(node.doWhileLoop.statement, indentation + 1);
       break;
    } case StmtType::breakStmt: {
       break;
@@ -119,9 +126,6 @@ void ASTArena::print(NodeId id, int indentation) const {
    } case StmtType::unlessStmt: {
       print(node.unlessStmt.statement, indentation + 1);
       print(node.unlessStmt.expression, indentation + 1);
-      break;
-   } case StmtType::doStmt: {
-      print(node.doStmt.statement, indentation + 1);
       break;
    } case StmtType::importStmt: {
       printf("%s:", strings[node.importStmt.file].c_str());
@@ -145,6 +149,7 @@ void ASTArena::print(NodeId id, int indentation) const {
       break;
    } case StmtType::property: {
       print(node.property.left, indentation + 1);
+      printf("\n%*sNull check: %s", indentation + 1, "", node.property.nullChecked ? "true" : "false");
       printf("\n%*sAccess: %s", indentation + 1, "", strings[node.property.right].c_str());
       break;
    } case StmtType::arraySubscript: {
@@ -166,8 +171,6 @@ void ASTArena::print(NodeId id, int indentation) const {
       print(node.enumEntry.value, indentation + 1);
       printf("\n%*sArguments:", indentation + 1, "");
       printList(node.enumEntry.args, indentation + 2);
-      printf("\n%*sArgument Values:", indentation + 1, "");
-      printList(node.enumEntry.argValues, indentation + 2);
       break;
    } case StmtType::identifier: {
       printf("%s", strings[node.identifier.id].c_str());
@@ -207,15 +210,15 @@ NodeId ASTArena::allocateVarDecl(bool isPublic, const std::string &identifier, N
    return allocate(node);
 }
 
-NodeId ASTArena::allocateFnDecl(bool isPublic, const std::string &identifier, NodeId body, const std::vector<NodeId> &params, size_t line) {
+NodeId ASTArena::allocateFnDecl(bool isPublic, const std::string &module, const std::string &identifier, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line) {
    Node node {StmtType::fnDecl, line};
-   node.fnDecl = {isPublic, pushString(identifier), body, pushVector(params)};
+   node.fnDecl = {isPublic, pushString(module), pushString(identifier), pushVector(body), pushVector(params)};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateLambda(NodeId body, const std::vector<NodeId> &params, size_t line) {
+NodeId ASTArena::allocateLambda(const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line) {
    Node node {StmtType::lambda, line};
-   node.lambda = {body, pushVector(params)};
+   node.lambda = {pushVector(body), pushVector(params)};
    return allocate(node);
 }
 
@@ -237,9 +240,9 @@ NodeId ASTArena::allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elif
    return allocate(node);
 }
 
-NodeId ASTArena::allocateIfClause(TokenType keyword, NodeId expression, NodeId statement, size_t line) {
+NodeId ASTArena::allocateIfClause(TokenType keyword, NodeId expression, const std::vector<NodeId> &statement, size_t line) {
    Node node {StmtType::ifClause, line};
-   node.ifClause = {keyword, expression, statement};
+   node.ifClause = {keyword, expression, pushVector(statement)};
    return allocate(node);
 }
 
@@ -249,27 +252,27 @@ NodeId ASTArena::allocateMatchStmt(NodeId expression, const std::vector<NodeId> 
    return allocate(node);
 }
 
-NodeId ASTArena::allocateForLoop(const std::string &identifier, NodeId inExpression, NodeId body, size_t line) {
+NodeId ASTArena::allocateForLoop(const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line) {
    Node node {StmtType::forLoop, line};
-   node.forLoop = {pushString(identifier), inExpression, body};
+   node.forLoop = {pushString(identifier), inExpression, pushVector(body)};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateLoop(NodeId body, size_t line) {
+NodeId ASTArena::allocateLoop(const std::vector<NodeId> &body, size_t line) {
    Node node {StmtType::loop, line};
-   node.loop = {body};
+   node.loop = {pushVector(body)};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateWhileLoop(NodeId expression, NodeId statement, size_t line) {
+NodeId ASTArena::allocateWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line) {
    Node node {StmtType::whileLoop, line};
-   node.whileLoop = {expression, statement};
+   node.whileLoop = {expression, pushVector(statement)};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateDoWhileLoop(NodeId expression, NodeId statement, size_t line) {
+NodeId ASTArena::allocateDoWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line) {
    Node node {StmtType::doWhileLoop, line};
-   node.doWhileLoop = {expression, statement};
+   node.doWhileLoop = {expression, pushVector(statement)};
    return allocate(node);
 }
 
@@ -297,12 +300,6 @@ NodeId ASTArena::allocateUnlessStmt(NodeId statement, NodeId expression, size_t 
    return allocate(node);
 }
 
-NodeId ASTArena::allocateDoStmt(NodeId statement, size_t line) {
-   Node node {StmtType::doStmt, line};
-   node.doStmt = {statement};
-   return allocate(node);
-}
-
 NodeId ASTArena::allocateImportStmt(const std::vector<NodeId> &values, const std::string &file, const std::string &as, size_t line) {
    Node node {StmtType::importStmt, line};
    node.importStmt = {pushVector(values), pushString(file), pushString(as)};
@@ -327,9 +324,9 @@ NodeId ASTArena::allocateUnary(NodeId value, TokenType op, size_t line) {
    return allocate(node);
 }
 
-NodeId ASTArena::allocatePropertyAccess(NodeId left, const std::string &right, size_t line) {
+NodeId ASTArena::allocatePropertyAccess(bool nullChecked, NodeId left, const std::string &right, size_t line) {
    Node node {StmtType::property, line};
-   node.property = {left, pushString(right)};
+   node.property = {nullChecked, left, pushString(right)};
    return allocate(node);
 }
 
@@ -351,9 +348,9 @@ NodeId ASTArena::allocateRange(bool inclusive, NodeId left, NodeId right, size_t
    return allocate(node);
 }
 
-NodeId ASTArena::allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, const std::vector<NodeId> &argValues, size_t line) {
+NodeId ASTArena::allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, size_t line) {
    Node node {StmtType::enumEntry, line};
-   node.enumEntry = {pushString(identifier), value, pushVector(args), pushVector(argValues)};
+   node.enumEntry = {pushString(identifier), value, pushVector(args)};
    return allocate(node);
 }
 

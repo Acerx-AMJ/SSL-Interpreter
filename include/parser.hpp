@@ -30,6 +30,7 @@ struct Parser {
    NodeId parseRangeExpr();
    NodeId parseExpr();
    NodeId parseAssignmentExpr();
+   NodeId parseNullCoalesceExpr();
    NodeId parseLogicalOrExpr();
    NodeId parseLogicalAndExpr();
    NodeId parseEqualityExpr();

@@ -9,7 +9,7 @@ enum class StmtType: char {
    varDecl, fnDecl, lambda, enumDecl, structDecl,
    ifStmt, ifClause, matchStmt,
    forLoop, loop, whileLoop, doWhileLoop, breakStmt, continueStmt,
-   returnStmt, unlessStmt, doStmt, importStmt,
+   returnStmt, unlessStmt, importStmt,
    assignment, binary, unary, property, arraySubscript, call, range,
    enumEntry, identifier, number, string, array, null, program,
 };
@@ -18,9 +18,9 @@ constexpr const char *statementTypeStrings[] {
    "Variable Declaration", "Function Declaration", "Lambda", "Enumeration Declaration",
    "Structure Declaration", "If Statement", "If Clause", "Match Statement", "For Loop",
    "Loop", "While Loop", "Do While Loop", "Break Statement", "Continue Statement",
-   "Return Statement", "Unless Statement", "Do Statement", "Import Statement", "Assignment",
-   "Binary Expression", "Unary Expression", "Property Access", "Array Subscript", "Function Call",
-   "Range", "Enumeration Entry", "Identifier", "Number", "String", "Array", "Null", "Scope",
+   "Return Statement", "Unless Statement", "Import Statement", "Assignment", "Binary Expression",
+   "Unary Expression", "Property Access", "Array Subscript", "Function Call", "Range",
+   "Enumeration Entry", "Identifier", "Number", "String", "Array", "Null", "Scope",
 };
 
 constexpr const char *getStatementTypeAsString(StmtType type) {
@@ -45,13 +45,14 @@ struct VarDecl {
 
 struct FnDecl {
    bool isPublic;
+   StringId module;
    StringId identifier;
-   NodeId body;
+   NodeList body;
    NodeList parameters;
 };
 
 struct Lambda {
-   NodeId body;
+   NodeList body;
    NodeList parameters;
 };
 
@@ -76,7 +77,7 @@ struct IfStmt {
 struct IfClause {
    TokenType keyword;
    NodeId expression;
-   NodeId statement;
+   NodeList statement;
 };
 
 struct MatchStmt {
@@ -88,21 +89,21 @@ struct MatchStmt {
 struct ForLoop {
    StringId identifier;
    NodeId inExpression;
-   NodeId body;
+   NodeList body;
 };
 
 struct Loop {
-   NodeId body;
+   NodeList body;
 };
 
 struct WhileLoop {
    NodeId expression;
-   NodeId statement;
+   NodeList statement;
 };
 
 struct DoWhileLoop {
    NodeId expression;
-   NodeId statement;
+   NodeList statement;
 };
 
 struct BreakStmt {};
@@ -116,10 +117,6 @@ struct ReturnStmt {
 struct UnlessStmt {
    NodeId statement;
    NodeId expression;
-};
-
-struct DoStmt {
-   NodeId statement;
 };
 
 struct ImportStmt {
@@ -144,6 +141,7 @@ struct UnaryExpr {
 };
 
 struct PropertyAccess {
+   bool nullChecked;
    NodeId left;
    StringId right;
 };
@@ -168,7 +166,6 @@ struct EnumEntry {
    StringId identifier;
    NodeId value;
    NodeList args;
-   NodeList argValues;
 };
 
 struct IdentifierLiteral {
@@ -216,7 +213,6 @@ struct Node {
       ContinueStmt continueStmt;
       ReturnStmt returnStmt;
       UnlessStmt unlessStmt;
-      DoStmt doStmt;
       ImportStmt importStmt;
       Assignment assignment;
       BinaryExpr binary;
@@ -252,31 +248,30 @@ struct ASTArena {
 
    NodeId allocate(Node node);
    NodeId allocateVarDecl(bool isPublic, const std::string &identifier, NodeId value, size_t line);
-   NodeId allocateFnDecl(bool isPublic, const std::string &identifier, NodeId body, const std::vector<NodeId> &params, size_t line);
-   NodeId allocateLambda(NodeId body, const std::vector<NodeId> &params, size_t line);
+   NodeId allocateFnDecl(bool isPublic, const std::string &module, const std::string &identifier, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
+   NodeId allocateLambda(const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
    NodeId allocateEnumDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &entries, size_t line);
    NodeId allocateStructDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &decls, size_t line);
    NodeId allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elifClauses, NodeId elseClause, size_t line);
-   NodeId allocateIfClause(TokenType keyword, NodeId expression, NodeId statement, size_t line);
+   NodeId allocateIfClause(TokenType keyword, NodeId expression, const std::vector<NodeId> &statement, size_t line);
    NodeId allocateMatchStmt(NodeId expression, const std::vector<NodeId> &cases, NodeId elseClause, size_t line);
-   NodeId allocateForLoop(const std::string &identifier, NodeId inExpression, NodeId body, size_t line);
-   NodeId allocateLoop(NodeId body, size_t line);
-   NodeId allocateWhileLoop(NodeId expression, NodeId statement, size_t line);
-   NodeId allocateDoWhileLoop(NodeId expression, NodeId statement, size_t line);
+   NodeId allocateForLoop(const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line);
+   NodeId allocateLoop(const std::vector<NodeId> &body, size_t line);
+   NodeId allocateWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line);
+   NodeId allocateDoWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line);
    NodeId allocateBreakStmt(size_t line);
    NodeId allocateContinueStmt(size_t line);
    NodeId allocateReturnStmt(NodeId value, size_t line);
    NodeId allocateUnlessStmt(NodeId statement, NodeId expression, size_t line);
-   NodeId allocateDoStmt(NodeId statement, size_t line);
    NodeId allocateImportStmt(const std::vector<NodeId> &values, const std::string &file, const std::string &as, size_t line);
    NodeId allocateAssignment(NodeId left, NodeId right, TokenType op, size_t line);
    NodeId allocateBinary(NodeId left, NodeId right, TokenType op, size_t line);
    NodeId allocateUnary(NodeId value, TokenType op, size_t line);
-   NodeId allocatePropertyAccess(NodeId left, const std::string &right, size_t line);
+   NodeId allocatePropertyAccess(bool nullChecked, NodeId left, const std::string &right, size_t line);
    NodeId allocateArraySubscript(NodeId left, NodeId expression, size_t line);
    NodeId allocateFnCall(NodeId left, const std::vector<NodeId> &args, size_t line);
    NodeId allocateRange(bool inclusive, NodeId left, NodeId right, size_t line);
-   NodeId allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, const std::vector<NodeId> &argValues, size_t line);
+   NodeId allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, size_t line);
    NodeId allocateIdentifier(const std::string &string, size_t line);
    NodeId allocateNumber(long double number, size_t line);
    NodeId allocateString(const std::string &string, size_t line);
