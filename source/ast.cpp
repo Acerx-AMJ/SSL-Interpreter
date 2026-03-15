@@ -87,13 +87,11 @@ void ASTArena::print(NodeId id, int indentation) const {
       print(node.ifClause.statement, indentation + 1);
       break;
    } case StmtType::matchStmt: {
+      printf("\n%*sExpression:", indentation + 1, "");
+      print(node.matchStmt.expression, indentation + 2);
       printf("\n%*sCases:", indentation + 1, "");
       printList(node.matchStmt.cases, indentation + 1);
       print(node.matchStmt.elseClause, indentation + 1);
-      break;
-   } case StmtType::matchCase: {
-      print(node.matchCase.expression, indentation + 1);
-      print(node.matchCase.statement, indentation + 1);
       break;
    } case StmtType::forLoop: {
       printf("%s:", strings[node.forLoop.identifier].c_str());
@@ -236,15 +234,9 @@ NodeId ASTArena::allocateIfClause(TokenType keyword, NodeId expression, NodeId s
    return allocate(node);
 }
 
-NodeId ASTArena::allocateMatchStmt(const std::vector<NodeId> &cases, NodeId elseClause, size_t line) {
+NodeId ASTArena::allocateMatchStmt(NodeId expression, const std::vector<NodeId> &cases, NodeId elseClause, size_t line) {
    Node node {StmtType::matchStmt, line};
-   node.matchStmt = {pushVector(cases), elseClause};
-   return allocate(node);
-}
-
-NodeId ASTArena::allocateMatchCase(NodeId expression, NodeId statement, size_t line) {
-   Node node {StmtType::matchCase, line};
-   node.matchCase = {expression, statement};
+   node.matchStmt = {expression, pushVector(cases), elseClause};
    return allocate(node);
 }
 

@@ -51,6 +51,20 @@ NodeId Parser::parseStmt() {
 
    if (keyword == TokenType::kif) {
       return parseIfStmt();
+   } else if (keyword == TokenType::kmatch) {
+      return parseMatchStmt();
+   } else if (keyword == TokenType::kdo) {
+      return parseDoWhileLoopOrNewScope();
+   } else if (keyword == TokenType::kwhile) {
+      return parseWhileLoop();
+   } else if (keyword == TokenType::kloop) {
+      return parseLoop();
+   } else if (keyword == TokenType::kfor) {
+      return parseForLoop();
+   } else if (keyword == TokenType::kbreak) {
+      return parseBreak();
+   } else if (keyword == TokenType::kcontinue) {
+      return parseContinue();
    }
    return parseExpr();
 }
@@ -227,7 +241,9 @@ NodeId Parser::parseIfClause() {
    size_t programLine = line();
    std::vector<NodeId> nodes;
 
-   while (!is(TokenType::kend) && !is(TokenType::kelif) && !is(TokenType::kelse)) {
+   while (!is(TokenType::kend) && !is(TokenType::kelif) && !is(TokenType::kelse)
+       && !is(TokenType::kcase)) {
+
       if (is(TokenType::eof)) {
          raiseError(originalLine, "Unterminated %s statement.", getTokenTypeAsString(keyword));
       }
@@ -237,6 +253,160 @@ NodeId Parser::parseIfClause() {
 
    NodeId program = arena.allocateProgram(nodes, programLine);
    return arena.allocateIfClause(keyword, expression, program, originalLine);
+}
+
+NodeId Parser::parseMatchStmt() {
+   size_t original_line = line();
+   advance();
+
+   NodeId expression = null;
+   std::vector<NodeId> cases;
+
+   if (!is(TokenType::kcase) && !is(TokenType::kelse) && !is(TokenType::kend)) {
+      expression = parseExpr();
+   }
+
+   while (is(TokenType::kcase)) {
+      NodeId caseClause = parseIfClause();
+      cases.push_back(caseClause);
+   }
+
+   NodeId elseClause = null;
+   if (is(TokenType::kelse)) {
+      elseClause = parseIfClause();
+   }
+
+   expect(StmtType::matchStmt, TokenType::kend);
+   advance();
+   return arena.allocateMatchStmt(expression, cases, elseClause, original_line);
+}
+
+NodeId Parser::parseForLoop() {
+   size_t originalLine = line();
+   advance();
+
+   expect(StmtType::forLoop, TokenType::identifier);
+   std::string identifier = current().lexeme;
+   advance();
+
+   expect(StmtType::forLoop, TokenType::kin);
+   advance();
+
+   NodeId expression = parseExpr();
+   std::vector<NodeId> nodes;
+   size_t programLine = line();
+
+   while (!is(TokenType::kend)) {
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated for loop.");
+      }
+
+      NodeId node = parseStmt();
+      nodes.push_back(node);
+   }
+
+   advance();
+   NodeId program = arena.allocateProgram(nodes, programLine);
+   return arena.allocateForLoop(identifier, expression, program, originalLine);
+}
+
+NodeId Parser::parseLoop() {
+   size_t originalLine = line();
+   advance();
+
+   std::vector<NodeId> nodes;
+   size_t programLine = line();
+
+   while (!is(TokenType::kend)) {
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated loop.");
+      }
+
+      NodeId node = parseStmt();
+      nodes.push_back(node);
+   }
+
+   advance();
+   NodeId program = arena.allocateProgram(nodes, programLine);
+   return arena.allocateLoop(program, originalLine);
+}
+
+NodeId Parser::parseWhileLoop() {
+   size_t originalLine = line();
+   advance();
+
+   NodeId expression = parseExpr();
+   std::vector<NodeId> nodes;
+   size_t programLine = line();
+
+   while (!is(TokenType::kend)) {
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated while loop.");
+      }
+
+      NodeId node = parseStmt();
+      nodes.push_back(node);
+   }
+
+   advance();
+   NodeId program = arena.allocateProgram(nodes, programLine);
+   return arena.allocateWhileLoop(expression, program, originalLine);
+}
+
+NodeId Parser::parseDoWhileLoopOrNewScope() {
+   size_t originalLine = line();
+   advance();
+
+   std::vector<NodeId> nodes;
+   size_t programLine = line();
+
+   while (!is(TokenType::kend) && !is(TokenType::kwhile)) {
+      if (is(TokenType::eof)) {
+         raiseError(originalLine, "Unterminated do statement.");
+      }
+
+      NodeId node = parseStmt();
+      nodes.push_back(node);
+   }
+
+   NodeId program = arena.allocateProgram(nodes, programLine);
+   if (is(TokenType::kend)) {
+      advance();
+      return arena.allocateDoStmt(program, originalLine);
+   }
+
+   advance();
+   NodeId expression = parseExpr();
+   return arena.allocateDoWhileLoop(expression, program, originalLine);
+}
+
+NodeId Parser::parseBreak() {
+   size_t originalLine = line();
+   advance();
+   return parseUnless(arena.allocateBreakStmt(originalLine));
+}
+
+NodeId Parser::parseContinue() {
+   size_t originalLine = line();
+   advance();
+   return parseUnless(arena.allocateContinueStmt(originalLine));
+}
+
+NodeId Parser::parseReturn() {
+
+}
+
+NodeId Parser::parseUnless(NodeId statement) {
+   if (!is(TokenType::kunless)) {
+      return statement;
+   }
+   advance();
+   NodeId expression = parseExpr();
+   return arena.allocateUnlessStmt(statement, expression, arena.get(statement).line);
+}
+
+NodeId Parser::parseImport() {
+   
 }
 
 // expressions

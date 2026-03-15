@@ -17,15 +17,14 @@ struct Parser {
    NodeId parseIfStmt();
    NodeId parseIfClause();
    NodeId parseMatchStmt();
-   NodeId parseMathClause();
    NodeId parseForLoop();
    NodeId parseLoop();
    NodeId parseWhileLoop();
-   NodeId parseDoWhileLoop();
+   NodeId parseDoWhileLoopOrNewScope();
    NodeId parseBreak();
    NodeId parseContinue();
    NodeId parseReturn();
-   NodeId parseUnless();
+   NodeId parseUnless(NodeId statement);
    NodeId parseImport();
 
    NodeId parseExpr();

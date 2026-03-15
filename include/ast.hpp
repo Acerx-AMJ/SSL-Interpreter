@@ -7,7 +7,7 @@
 
 enum class StmtType: char {
    varDecl, fnDecl, lambda, enumDecl, structDecl,
-   ifStmt, ifClause, matchStmt, matchCase,
+   ifStmt, ifClause, matchStmt,
    forLoop, loop, whileLoop, doWhileLoop, breakStmt, continueStmt,
    returnStmt, unlessStmt, doStmt, importStmt,
    assignment, binary, unary, property, call,
@@ -16,8 +16,8 @@ enum class StmtType: char {
 
 constexpr const char *statementTypeStrings[] {
    "Variable Declaration", "Function Declaration", "Lambda", "Enumeration Declaration",
-   "Structure Declaration", "If Statement", "If Clause", "Match Statement", "Match Case",
-   "For Loop", "Loop", "While Loop", "Do While Loop", "Break Statement", "Continue Statement",
+   "Structure Declaration", "If Statement", "If Clause", "Match Statement", "For Loop",
+   "Loop", "While Loop", "Do While Loop", "Break Statement", "Continue Statement",
    "Return Statement", "Unless Statement", "Do Statement", "Import Statement", "Assignment",
    "Binary Expression", "Unary Expression", "Property Access", "Function Call", "Enumeration Entry",
    "Identifier", "Number", "String", "Array", "Null", "Scope",
@@ -80,13 +80,9 @@ struct IfClause {
 };
 
 struct MatchStmt {
+   NodeId expression;
    NodeList cases;
    NodeId elseClause;
-};
-
-struct MatchCase {
-   NodeId expression;
-   NodeId statement;
 };
 
 struct ForLoop {
@@ -201,7 +197,6 @@ struct Node {
       IfStmt ifStmt;
       IfClause ifClause;
       MatchStmt matchStmt;
-      MatchCase matchCase;
       ForLoop forLoop;
       Loop loop;
       WhileLoop whileLoop;
@@ -250,8 +245,7 @@ struct ASTArena {
    NodeId allocateStructDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &decls, size_t line);
    NodeId allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elifClauses, NodeId elseClause, size_t line);
    NodeId allocateIfClause(TokenType keyword, NodeId expression, NodeId statement, size_t line);
-   NodeId allocateMatchStmt(const std::vector<NodeId> &cases, NodeId elseClause, size_t line);
-   NodeId allocateMatchCase(NodeId expression, NodeId statement, size_t line);
+   NodeId allocateMatchStmt(NodeId expression, const std::vector<NodeId> &cases, NodeId elseClause, size_t line);
    NodeId allocateForLoop(const std::string &identifier, NodeId inExpression, NodeId body, size_t line);
    NodeId allocateLoop(NodeId body, size_t line);
    NodeId allocateWhileLoop(NodeId expression, NodeId statement, size_t line);
