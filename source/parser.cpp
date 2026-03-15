@@ -685,7 +685,7 @@ NodeId Parser::parsePrimaryExpr() {
       }
       catch (...) {
          raiseError(originalLine, "Failed to convert string '%s' to number. It might be too large, "
-                            "too small or invalid.", current().lexeme.c_str());
+                                  "too small or invalid.", current().lexeme.c_str());
       }
       advance();
       return arena.allocateNumber(number, originalLine);
@@ -786,7 +786,7 @@ void Parser::expect(StmtType type, TokenType expected) {
 }
 
 bool Parser::is(TokenType type) const {
-   return index < tokens.size() && tokens[index].type == type;
+   return tokens[index].type == type;
 }
 
 bool Parser::peek(TokenType type) const {

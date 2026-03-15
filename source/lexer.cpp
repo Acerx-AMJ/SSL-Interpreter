@@ -1,8 +1,9 @@
 #include "lexer.hpp"
 #include "error.hpp"
 
-Lexer::Lexer(const std::string &code)
-   : code(code) {}
+Lexer::Lexer(const std::string &code): code(code) {
+   tokens.reserve(code.size() / 4);
+}
 
 std::vector<Token> &Lexer::lex() {
    for (char ch = current(); index < code.size(); ch = advance()) {
@@ -36,6 +37,7 @@ std::vector<Token> &Lexer::lex() {
       }
       else if (isdigit(ch)) {
          std::string number;
+         number.reserve(16);
          bool dot = false, lastDash = false;
 
          while (index < code.size()) {
@@ -73,6 +75,7 @@ std::vector<Token> &Lexer::lex() {
       }
       else if (ch == '"' || ch == '\'') {
          std::string string;
+         string.reserve(32);
          char end = ch;
 
          size_t originalLine = line;
@@ -93,18 +96,20 @@ std::vector<Token> &Lexer::lex() {
          pushToken(TokenType::string, string, originalLine);
       }
       else if (isalpha(ch) || ch == '_') {
-         std::string identifier;
+         const char *start = &code[index];
+         size_t length = 0;
 
          while (index < code.size() && (isalnum(ch) || ch == '_')) {
-            identifier.push_back(ch);
+            length += 1;
             ch = advance();
          }
 
-         if (auto it = keywords.find(identifier); it != keywords.end()) {
-            pushToken(it->second, identifier, line);
+         std::string_view view (start, length);
+         if (auto it = keywords.find(view); it != keywords.end()) {
+            pushToken(it->second, std::string(view), line);
          }
          else {
-            pushToken(TokenType::identifier, identifier, line);
+            pushToken(TokenType::identifier, std::string(view), line);
          }
          index -= 1;
       }
