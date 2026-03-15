@@ -73,12 +73,14 @@ std::vector<Token> &Lexer::lex() {
          index -= 1;
       }
       // strings
-      else if (ch == '"') {
+      else if (ch == '"' || ch == '\'') {
          std::string string;
+         char end = ch;
+
          size_t originalLine = line;
          ch = advance();
 
-         while (index < code.size() && ch != '"') {
+         while (index < code.size() && ch != end) {
             line += (ch == '\n');
             if (ch == '\\') {
                ch = getEscapeCode(advance());
@@ -87,7 +89,7 @@ std::vector<Token> &Lexer::lex() {
             ch = advance();
          }
 
-         if (ch != '"') {
+         if (ch != end) {
             raiseError(originalLine, "Unterminated string.");
          }
          pushToken(TokenType::string, string, originalLine);

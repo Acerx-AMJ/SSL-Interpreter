@@ -125,7 +125,7 @@ struct DoStmt {
 struct ImportStmt {
    NodeList values;
    StringId file;
-   NodeId as;
+   StringId as;
 };
 
 struct Assignment {
@@ -255,7 +255,7 @@ struct ASTArena {
    NodeId allocateReturnStmt(NodeId value, size_t line);
    NodeId allocateUnlessStmt(NodeId statement, NodeId expression, size_t line);
    NodeId allocateDoStmt(NodeId statement, size_t line);
-   NodeId allocateImportStmt(const std::vector<NodeId> &values, const std::string &file, NodeId as, size_t line);
+   NodeId allocateImportStmt(const std::vector<NodeId> &values, const std::string &file, const std::string &as, size_t line);
    NodeId allocateAssignment(NodeId left, NodeId right, TokenType op, size_t line);
    NodeId allocateBinary(NodeId left, NodeId right, TokenType op, size_t line);
    NodeId allocateUnary(NodeId value, TokenType op, size_t line);

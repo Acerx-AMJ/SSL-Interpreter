@@ -16,7 +16,7 @@ Program &Parser::parse() {
    return arena.get(id).program;
 }
 
-// parsing
+// statements
 
 NodeId Parser::parseStmt() {
    TokenType keyword = current().type;
@@ -65,11 +65,13 @@ NodeId Parser::parseStmt() {
       return parseBreak();
    } else if (keyword == TokenType::kcontinue) {
       return parseContinue();
+   } else if (keyword == TokenType::kreturn) {
+      return parseReturn();
+   } else if (keyword == TokenType::kimport) {
+      return parseImport();
    }
    return parseExpr();
 }
-
-// statements
 
 NodeId Parser::parseVarDecl(bool isPublic) {
    size_t originalLine = line();
@@ -382,18 +384,28 @@ NodeId Parser::parseDoWhileLoopOrNewScope() {
 
 NodeId Parser::parseBreak() {
    size_t originalLine = line();
+   NodeId breakStmt = arena.allocateBreakStmt(originalLine);
    advance();
-   return parseUnless(arena.allocateBreakStmt(originalLine));
+   return parseUnless(breakStmt);
 }
 
 NodeId Parser::parseContinue() {
    size_t originalLine = line();
+   NodeId continueStmt = arena.allocateContinueStmt(originalLine);
    advance();
-   return parseUnless(arena.allocateContinueStmt(originalLine));
+   return parseUnless(continueStmt);
 }
 
 NodeId Parser::parseReturn() {
+   size_t originalLine = line();
+   advance();
 
+   NodeId expression = null;
+   if (!is(TokenType::kend) && !is(TokenType::kunless)) {
+      expression = parseExpr();
+   }
+   NodeId returnStmt = arena.allocateReturnStmt(expression, originalLine);
+   return parseUnless(returnStmt);
 }
 
 NodeId Parser::parseUnless(NodeId statement) {
@@ -406,47 +418,163 @@ NodeId Parser::parseUnless(NodeId statement) {
 }
 
 NodeId Parser::parseImport() {
-   
+   size_t originalLine = line();
+   std::vector<NodeId> values;
+
+   if (!peek(TokenType::kall)) {
+      do {
+         advance();
+         if (is(TokenType::eof)) {
+            raiseError(originalLine, "Unterminated import statement.");
+         }
+
+         if (is(TokenType::kfrom)) {
+            break;
+         }
+
+         expect(StmtType::importStmt, TokenType::identifier);
+         NodeId identifier = parsePrimaryExpr();
+         values.push_back(identifier);
+      } while (is(TokenType::comma));
+   } else {
+      advance();
+      advance();
+   }
+
+   expect(StmtType::importStmt, TokenType::kfrom);
+   advance();
+
+   expect(StmtType::importStmt, TokenType::string);
+   std::string file = current().lexeme;
+   std::string as;
+   advance();
+
+   if (is(TokenType::kas)) {
+      advance();
+      expect(StmtType::importStmt, TokenType::identifier);
+      as = current().lexeme;
+      advance();
+   }
+   return arena.allocateImportStmt(values, file, as, originalLine);
 }
 
 // expressions
 
 NodeId Parser::parseExpr() {
-   return parseAdditiveExpr();
+   return parseAssignmentExpr();
+}
+
+NodeId Parser::parseAssignmentExpr() {
+   size_t originalLine = line();
+   NodeId left = parseLogicalOrExpr();
+
+   if (is(TokenType::equals) || is(TokenType::plusEquals) || is(TokenType::minusEquals)
+    || is(TokenType::starEquals) || is(TokenType::slashEquals) || is(TokenType::modEquals)
+    || is(TokenType::powEquals)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseAssignmentExpr();
+      left = arena.allocateAssignment(left, right, op, originalLine);
+   }
+   return left;
+}
+
+NodeId Parser::parseLogicalOrExpr() {
+   size_t originalLine = line();
+   NodeId left = parseLogicalAndExpr();
+
+   while (is(TokenType::kor)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseLogicalAndExpr();
+      left = arena.allocateBinary(left, right, op, originalLine);
+   }
+   return left;
+}
+
+NodeId Parser::parseLogicalAndExpr() {
+   size_t originalLine = line();
+   NodeId left = parseEqualityExpr();
+
+   while (is(TokenType::kand)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseEqualityExpr();
+      left = arena.allocateBinary(left, right, op, originalLine);
+   }
+   return left;
+}
+
+NodeId Parser::parseEqualityExpr() {
+   size_t originalLine = line();
+   NodeId left = parseRelationalExpr();
+
+   while (is(TokenType::equalsEquals) || is(TokenType::notEquals) || is(TokenType::divisible)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseRelationalExpr();
+      left = arena.allocateBinary(left, right, op, originalLine);
+   }
+   return left;
+}
+
+NodeId Parser::parseRelationalExpr() {
+   size_t originalLine = line();
+   NodeId left = parseAdditiveExpr();
+
+   while (is(TokenType::bigger) || is(TokenType::biggerEquals) || is(TokenType::smaller)
+       || is(TokenType::smallerEquals)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseAdditiveExpr();
+      left = arena.allocateBinary(left, right, op, originalLine);
+   }
+   return left;
 }
 
 NodeId Parser::parseAdditiveExpr() {
+   size_t originalLine = line();
    NodeId left = parseMultiplicativeExpr();
+
    while (is(TokenType::plus) || is(TokenType::minus)) {
       TokenType op = current().type;
       advance();
 
       NodeId right = parseMultiplicativeExpr();
-      left = arena.allocateBinary(left, right, op, line());
+      left = arena.allocateBinary(left, right, op, originalLine);
    }
    return left;
 }
 
 NodeId Parser::parseMultiplicativeExpr() {
+   size_t originalLine = line();
    NodeId left = parseExponentiativeExpr();
+
    while (is(TokenType::star) || is(TokenType::slash) || is(TokenType::mod)) {
       TokenType op = current().type;
       advance();
 
       NodeId right = parseExponentiativeExpr();
-      left = arena.allocateBinary(left, right, op, line());
+      left = arena.allocateBinary(left, right, op, originalLine);
    }
    return left;
 }
 
 NodeId Parser::parseExponentiativeExpr() {
+   size_t originalLine = line();
    NodeId left = parsePrimaryExpr();
+
    if (is(TokenType::pow)) {
       TokenType op = current().type;
       advance();
 
       NodeId right = parseExponentiativeExpr();
-      left = arena.allocateBinary(left, right, op, line());
+      left = arena.allocateBinary(left, right, op, originalLine);
    }
    return left;
 }

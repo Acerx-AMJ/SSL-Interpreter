@@ -6,8 +6,8 @@
 
 enum class TokenType: char {
    eof, identifier, number, string,
-   increment, decrement, colonEquals, equals, plusEquals, minusEquals, starEquals, slashEquals, modEquals, powEquals,
-   plus, minus, star, slash, mod, pow,
+   increment, decrement, colonEquals, equals, plusEquals, minusEquals, starEquals, slashEquals,
+   modEquals, powEquals, plus, minus, star, slash, mod, pow,
    divisible, equalsEquals, notEquals, bigger, biggerEquals, smaller, smallerEquals,
    lparen, rparen, lbracket, rbracket, lbrace, rbrace, comma, reference, dot,
    none, kand, kor, knot,

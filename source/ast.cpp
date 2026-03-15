@@ -127,7 +127,7 @@ void ASTArena::print(NodeId id, int indentation) const {
       printf("%s:", strings[node.importStmt.file].c_str());
       printf("\n%*sValues:", indentation + 1, "");
       printList(node.importStmt.values, indentation + 2);
-      print(node.importStmt.as, indentation + 1);
+      printf("\n%*sas: %s", indentation + 1, "", strings[node.importStmt.as].c_str());
       break;
    } case StmtType::assignment: {
       printf("\n%*sOperator: %s", indentation + 1, "", getTokenTypeAsString(node.assignment.op));
@@ -294,9 +294,9 @@ NodeId ASTArena::allocateDoStmt(NodeId statement, size_t line) {
    return allocate(node);
 }
 
-NodeId ASTArena::allocateImportStmt(const std::vector<NodeId> &values, const std::string &file, NodeId as, size_t line) {
+NodeId ASTArena::allocateImportStmt(const std::vector<NodeId> &values, const std::string &file, const std::string &as, size_t line) {
    Node node {StmtType::importStmt, line};
-   node.importStmt = {pushVector(values), pushString(file), as};
+   node.importStmt = {pushVector(values), pushString(file), pushString(as)};
    return allocate(node);
 }
 
