@@ -4,7 +4,8 @@
 Environment::Environment(Environment *parent)
    : parent(parent) {}
 
-Environment::Environment(): parent(nullptr) {
+Environment::Environment()
+   : parent(nullptr) {
 
 }
 

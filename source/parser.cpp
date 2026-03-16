@@ -626,8 +626,7 @@ NodeId Parser::parseExponentiativeExpr() {
 }
 
 NodeId Parser::parseUnaryExpr() {
-   if (is(TokenType::plus) || is(TokenType::minus) || is(TokenType::reference)
-    || is(TokenType::knot)) {
+   if (is(TokenType::plus) || is(TokenType::minus) || is(TokenType::knot)) {
       size_t originalLine = line();
       TokenType op = current().type;
 

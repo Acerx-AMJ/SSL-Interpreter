@@ -1,10 +1,7 @@
 #ifndef SSL_ENVIRONMENT_HPP
 #define SSL_ENVIRONMENT_HPP
 
-#include <string>
-#include <unordered_map>
-
-struct ValueId {};
+#include "values.hpp"
 
 struct Environment {
    Environment(Environment *parent);

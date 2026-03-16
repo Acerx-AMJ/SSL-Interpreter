@@ -1,0 +1,40 @@
+#ifndef SSL_INTERPRETER_HPP
+#define SSL_INTERPRETER_HPP
+
+#include "environment.hpp"
+
+struct Interpreter {
+   Interpreter(ASTArena &arena);
+   ValueId evaluate(NodeList program, Environment &environment);
+
+   // statement evaluation
+
+   ValueId evaluateStmt(Environment &environment, NodeId node);
+
+   // expression evaluation
+
+   ValueId evaluateExpr(Environment &environment, NodeId node);
+   ValueId evaluateBinaryExpr(Environment &environment, NodeId node);
+   ValueId evaluateUnaryExpr(Environment &environment, NodeId node);
+   ValueId evaluatePropertyAccess(Environment &environment, NodeId node);
+   ValueId evaluateArraySubscript(Environment &environment, NodeId node);
+   ValueId evaluateAssignment(Environment &environment, NodeId node);
+   ValueId evaluateCallExpr(Environment &environment, NodeId node);
+   ValueId evaluatePrimaryExpr(Environment &environment, NodeId node);
+
+   // allocate
+
+   ValueId allocate(Value value);
+   ValueId allocateNumber(long double number, size_t line);
+   ValueId allocateBoolean(bool boolean, size_t line);
+   ValueId allocateString(StringId string, size_t line);
+   ValueId allocateString(const std::string &string, size_t line);
+   ValueId allocateFunction(NodeId function, size_t line);
+
+   // Members
+
+   ASTArena &arena;
+   std::vector<Value> valuePool;
+};
+
+#endif
