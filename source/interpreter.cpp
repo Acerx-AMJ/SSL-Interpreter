@@ -35,7 +35,19 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
 // statement evaluation
 
 ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
-   return evaluateExpr(environment, node);
+   Node &n = arena.get(node);
+
+   switch (n.type) {
+   case StmtType::varDecl: return evaluateVarDecl(environment, node);
+   default:                return evaluateExpr(environment, node);
+   }
+}
+
+ValueId Interpreter::evaluateVarDecl(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   ValueId value = evaluateExpr(environment, n.varDecl.value);
+   environment.declare(arena.strings[n.varDecl.identifier], value, n.line);
+   return null;
 }
 
 // expression evaluation
@@ -44,20 +56,13 @@ ValueId Interpreter::evaluateExpr(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
 
    switch (n.type) {
-   case StmtType::binary:
-      return evaluateBinaryExpr(environment, node);
-   case StmtType::unary:
-      return evaluateUnaryExpr(environment, node);
-   case StmtType::property:
-      return evaluatePropertyAccess(environment, node);
-   case StmtType::arraySubscript:
-      return evaluateArraySubscript(environment, node);
-   case StmtType::assignment:
-      return evaluateAssignment(environment, node);
-   case StmtType::call:
-      return evaluateCallExpr(environment, node);
-   default:
-      return evaluatePrimaryExpr(environment, node);
+   case StmtType::binary:         return evaluateBinaryExpr(environment, node);
+   case StmtType::unary:          return evaluateUnaryExpr(environment, node);
+   case StmtType::property:       return evaluatePropertyAccess(environment, node);
+   case StmtType::arraySubscript: return evaluateArraySubscript(environment, node);
+   case StmtType::assignment:     return evaluateAssignment(environment, node);
+   case StmtType::call:           return evaluateCallExpr(environment, node);
+   default:                       return evaluatePrimaryExpr(environment, node);
    }
 }
 
@@ -70,14 +75,16 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
       return l.type == ValueType::null ? evaluateExpr(environment, n.binary.right) : left;
    }
    else if (n.binary.op == TokenType::kand) {
-      if (!l.asBoolean(*this)) return false;
+      if (!l.asBoolean(*this)) return allocateBoolean(false, n.line);
       ValueId right = evaluateExpr(environment, n.binary.right);
-      return valuePool[right].asBoolean(*this);
+      bool result = valuePool[right].asBoolean(*this);
+      return allocateBoolean(result, n.line);
    }
    else if (n.binary.op == TokenType::kor) {
-      if (l.asBoolean(*this)) return true;
+      if (l.asBoolean(*this)) return allocateBoolean(true, n.line);
       ValueId right = evaluateExpr(environment, n.binary.right);
-      return valuePool[right].asBoolean(*this);
+      bool result = valuePool[right].asBoolean(*this);
+      return allocateBoolean(result, n.line);
    }
 
    ValueId right = evaluateExpr(environment, n.binary.right);
@@ -98,14 +105,23 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
    case TokenType::notEquals:     return l.notEqual(*this, r);
    case TokenType::divisible: {
       ValueId result = l.remainder(*this, r);
-      return allocateBoolean(!valuePool[result].asBoolean(*this), l.line);
+      return allocateBoolean(!valuePool[result].asBoolean(*this), n.line);
    }
-   default: raiseError(l.line, "Unsupported binary operator '%s'.", getTokenTypeAsString(n.binary.op));
+   default: raiseError(n.line, "Unsupported binary operator '%s'.", getTokenTypeAsString(n.binary.op));
    }
 }
 
 ValueId Interpreter::evaluateUnaryExpr(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   ValueId value = evaluateExpr(environment, n.unary.value);
+   Value &v = valuePool[value];
 
+   switch (n.unary.op) {
+   case TokenType::plus:  return value;
+   case TokenType::minus: return v.negate(*this);
+   case TokenType::knot:  return allocateBoolean(!v.asBoolean(*this), v.line);
+   default: raiseError(n.line, "Unsupported unary operator '%s'.", getTokenTypeAsString(n.unary.op));
+   }
 }
 
 ValueId Interpreter::evaluatePropertyAccess(Environment &environment, NodeId node) {
@@ -117,7 +133,39 @@ ValueId Interpreter::evaluateArraySubscript(Environment &environment, NodeId nod
 }
 
 ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   ValueId right = evaluateExpr(environment, n.assignment.right);
+   Value &r = valuePool[right];
 
+   Node &leftnode = arena.get(n.assignment.left);
+
+   // function calls aren't necessarily lvalues but they might be and I'm not in the mood to write the
+   // whole logic for checking that 
+   if (leftnode.type != StmtType::identifier     && leftnode.type != StmtType::property
+    && leftnode.type != StmtType::arraySubscript && leftnode.type != StmtType::call) {
+      raiseError(n.line, "Expected lvalue on the left of the assignment operator, got %s instead.",
+         getStatementTypeAsString(leftnode.type));
+   }
+
+   ValueId left = evaluateExpr(environment, n.assignment.left);
+   Value &l = valuePool[left];
+
+   switch (n.assignment.op) {
+   case TokenType::equals:      l = r;                                break;
+   case TokenType::plusEquals:  l = valuePool[l.add(*this, r)];       break;
+   case TokenType::minusEquals: l = valuePool[l.subtract(*this, r)];  break;
+   case TokenType::starEquals:  l = valuePool[l.multiply(*this, r)];  break;
+   case TokenType::slashEquals: l = valuePool[l.divide(*this, r)];    break;
+   case TokenType::modEquals:   l = valuePool[l.remainder(*this, r)]; break;
+   case TokenType::powEquals:   l = valuePool[l.pow(*this, r)];       break;
+   default: raiseError(n.line, "Unsupported assignment operator '%s'.",
+      getTokenTypeAsString(n.assignment.op));
+   }
+
+   if (n.assignment.op != TokenType::equals) {
+      valuePool.pop_back();
+   }
+   return left;
 }
 
 ValueId Interpreter::evaluateCallExpr(Environment &environment, NodeId node) {

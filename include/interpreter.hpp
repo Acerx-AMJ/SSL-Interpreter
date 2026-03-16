@@ -10,6 +10,7 @@ struct Interpreter {
    // statement evaluation
 
    ValueId evaluateStmt(Environment &environment, NodeId node);
+   ValueId evaluateVarDecl(Environment &environment, NodeId node);
 
    // expression evaluation
 
