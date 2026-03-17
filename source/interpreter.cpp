@@ -41,27 +41,32 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
       raiseError(f.line, "Cannot call %s value.", getValueTypeAsString(l.type));
    }
    
-   Node &stmt = arena.get(l.function);
+   Node &stmt = arena.get(l.function.function);
+   Environment *parent;
+   NodeList *body, *params;
+
    if (stmt.type == StmtType::lambda) {
-      if (stmt.lambda.parameters.size != args.size()) {
-         raiseError(f.line, "Expected argument count (%lu) to match parameter count (%lu).",
-            args.size(), stmt.lambda.parameters.size);
-      }
-
-      Environment newEnvironment (&environment);
-      for (size_t i = 0; i < args.size(); ++i) {
-         Node &param = arena.get(arena.children[i + stmt.lambda.parameters.start]);
-         newEnvironment.declare(arena.strings[param.identifier.id], args[i], f.line);
-      }
-
-      return evaluate(stmt.lambda.body, newEnvironment);
+      parent = &environment;
+      body = &stmt.lambda.body;
+      params = &stmt.lambda.parameters;
    }
    else if (stmt.type == StmtType::fnDecl) {
+      parent = l.function.env;
+      body = &stmt.fnDecl.body;
+      params = &stmt.fnDecl.parameters;
+   }
 
+   if (params->size != args.size()) {
+      raiseError(f.line, "Expected argument count (%lu) to match parameter count (%lu).",
+         args.size(), params->size);
    }
-   else {
-      raiseError(f.line, "Cannot call statement %s.", getStatementTypeAsString(stmt.type));
+
+   Environment newEnvironment (parent);
+   for (size_t i = 0; i < args.size(); ++i) {
+      Node &param = arena.get(arena.children[i + params->start]);
+      newEnvironment.declare(arena.strings[param.identifier.id], args[i], f.line);
    }
+   return evaluate(*body, newEnvironment);
 }
 
 // statement evaluation
@@ -85,7 +90,7 @@ ValueId Interpreter::evaluateVarDecl(Environment &environment, NodeId node) {
 
 ValueId Interpreter::evaluateFnDecl(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
-   ValueId value = allocateFunction(node, n.line);
+   ValueId value = allocateFunction(node, &environment, n.line);
    environment.declare(arena.strings[n.fnDecl.identifier], value, n.line);
    return null;
 }
@@ -233,7 +238,7 @@ ValueId Interpreter::evaluatePrimaryExpr(Environment &environment, NodeId node) 
    case StmtType::null:
       return null;
    case StmtType::lambda:
-      return allocateFunction(node, n.line);
+      return allocateFunction(node, nullptr, n.line);
    case StmtType::program: {
       Environment child (&environment);
       return evaluate(n.program.nodes, child);
@@ -275,8 +280,8 @@ ValueId Interpreter::allocateString(const std::string &string, size_t line) {
    return allocate(value);
 }
 
-ValueId Interpreter::allocateFunction(NodeId function, size_t line) {
+ValueId Interpreter::allocateFunction(NodeId function, Environment *environment, size_t line) {
    Value value {ValueType::function, line};
-   value.function = function;
+   value.function = {function, environment};
    return allocate(value);
 }

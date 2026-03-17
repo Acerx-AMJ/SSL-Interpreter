@@ -5,8 +5,8 @@
 #include "parser.hpp"
 
 int main(int argc, char *argv[]) {
-   if (argc != 2) {
-      raiseErrorNoLine("Expected 2 arguments, got %d instead.", argc);
+   if (argc < 2) {
+      raiseErrorNoLine("Expected at least 2 arguments, got %d instead.", argc);
    }
 
    std::string input = argv[1];
@@ -23,5 +23,30 @@ int main(int argc, char *argv[]) {
    Environment global;
    Interpreter interpreter (parser.arena);
    interpreter.evaluate(program.nodes, global);
+
+   if (global.exists("main")) {
+      ValueId main = global.get("main", 0);
+      Value &m = interpreter.valuePool[main];
+
+      if (m.type != ValueType::function) {
+         raiseError(m.line, "Expected 'main' to be a Function but it is %d instead.",
+            getValueTypeAsString(m.type));
+      }
+
+      Node &n = parser.arena.get(m.function.function);
+      size_t argcount = (n.type == StmtType::lambda ? n.lambda.parameters.size : n.fnDecl.parameters.size);
+
+      if (argcount > 1) {
+         raiseError(m.line, "Expected 'main' to have 0 or 1 parameters, got %d instead.", argcount);
+      }
+
+      if (argcount == 1) {
+         
+      }
+      else {
+         Environment newEnvironment (&global);
+         interpreter.evaluate(n.type == StmtType::lambda ? n.lambda.body : n.fnDecl.body, newEnvironment);
+      }
+   }
    return 0;
 }

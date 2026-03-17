@@ -92,7 +92,7 @@ ValueId Value::equal(Interpreter &interpreter, const Value &r) const {
    if (type == ValueType::null)     return interpreter.allocateBoolean(true, line);
    if (type == ValueType::number)   return interpreter.allocateBoolean(number == r.number, line);
    if (type == ValueType::boolean)  return interpreter.allocateBoolean(boolean == r.boolean, line);
-   if (type == ValueType::function) return interpreter.allocateBoolean(function == r.function, line);
+   if (type == ValueType::function) return interpreter.allocateBoolean(function.function == r.function.function, line);
    
    const std::string &first  = interpreter.arena.strings[string];
    const std::string &second = interpreter.arena.strings[r.string];

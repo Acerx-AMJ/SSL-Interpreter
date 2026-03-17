@@ -18,6 +18,11 @@ constexpr const char *getValueTypeAsString(ValueType type) {
 struct Interpreter;
 using ValueId = uint32_t;
 
+struct FunctionValue {
+   NodeId function;
+   struct Environment *env;
+};
+
 struct Value {
    ValueId negate(Interpreter &interpreter) const;
    ValueId add(Interpreter &interpreter, const Value &right) const;
@@ -46,7 +51,7 @@ struct Value {
       long double number;
       bool boolean;
       StringId string;
-      NodeId function;
+      FunctionValue function;
    };
 };
 
