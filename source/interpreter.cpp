@@ -32,6 +32,38 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
    return last;
 }
 
+ValueId Interpreter::callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line) {
+   Node &f = arena.get(function);
+   ValueId left = evaluateExpr(environment, function);
+   Value &l = valuePool[left];
+
+   if (l.type != ValueType::function) {
+      raiseError(f.line, "Cannot call %s value.", getValueTypeAsString(l.type));
+   }
+   
+   Node &stmt = arena.get(l.function);
+   if (stmt.type == StmtType::lambda) {
+      if (stmt.lambda.parameters.size != args.size()) {
+         raiseError(f.line, "Expected argument count (%lu) to match parameter count (%lu).",
+            args.size(), stmt.lambda.parameters.size);
+      }
+
+      Environment newEnvironment (&environment);
+      for (size_t i = 0; i < args.size(); ++i) {
+         Node &param = arena.get(arena.children[i + stmt.lambda.parameters.start]);
+         newEnvironment.declare(arena.strings[param.identifier.id], args[i], f.line);
+      }
+
+      return evaluate(stmt.lambda.body, newEnvironment);
+   }
+   else if (stmt.type == StmtType::fnDecl) {
+
+   }
+   else {
+      raiseError(f.line, "Cannot call statement %s.", getStatementTypeAsString(stmt.type));
+   }
+}
+
 // statement evaluation
 
 ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
@@ -39,6 +71,7 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
 
    switch (n.type) {
    case StmtType::varDecl: return evaluateVarDecl(environment, node);
+   case StmtType::fnDecl:  return evaluateFnDecl(environment, node);
    default:                return evaluateExpr(environment, node);
    }
 }
@@ -47,6 +80,13 @@ ValueId Interpreter::evaluateVarDecl(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
    ValueId value = evaluateExpr(environment, n.varDecl.value);
    environment.declare(arena.strings[n.varDecl.identifier], value, n.line);
+   return null;
+}
+
+ValueId Interpreter::evaluateFnDecl(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   ValueId value = allocateFunction(node, n.line);
+   environment.declare(arena.strings[n.fnDecl.identifier], value, n.line);
    return null;
 }
 
@@ -106,8 +146,8 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
    case TokenType::divisible: {
       ValueId result = l.remainder(*this, r);
       return allocateBoolean(!valuePool[result].asBoolean(*this), n.line);
-   }
-   default: raiseError(n.line, "Unsupported binary operator '%s'.", getTokenTypeAsString(n.binary.op));
+   } default:
+      raiseError(n.line, "Unsupported binary operator '%s'.", getTokenTypeAsString(n.binary.op));
    }
 }
 
@@ -158,8 +198,8 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
    case TokenType::slashEquals: l = valuePool[l.divide(*this, r)];    break;
    case TokenType::modEquals:   l = valuePool[l.remainder(*this, r)]; break;
    case TokenType::powEquals:   l = valuePool[l.pow(*this, r)];       break;
-   default: raiseError(n.line, "Unsupported assignment operator '%s'.",
-      getTokenTypeAsString(n.assignment.op));
+   default:
+      raiseError(n.line, "Unsupported assignment operator '%s'.", getTokenTypeAsString(n.assignment.op));
    }
 
    if (n.assignment.op != TokenType::equals) {
@@ -169,7 +209,15 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
 }
 
 ValueId Interpreter::evaluateCallExpr(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   std::vector<ValueId> args;
+   args.reserve(n.fnCall.args.size);
 
+   for (size_t index = n.fnCall.args.start; index < n.fnCall.args.start + n.fnCall.args.size; ++index) {
+      ValueId arg = evaluateExpr(environment, arena.children[index]);
+      args.push_back(arg);
+   }
+   return callFunction(environment, n.fnCall.left, args, n.line);
 }
 
 ValueId Interpreter::evaluatePrimaryExpr(Environment &environment, NodeId node) {

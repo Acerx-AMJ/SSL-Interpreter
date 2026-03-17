@@ -4,6 +4,10 @@
 #include "values.hpp"
 
 struct Environment {
+   // c++ footgun
+   Environment(const Environment &) = delete;
+   Environment(Environment &&) = delete;
+
    Environment(Environment *parent);
    Environment();
 

@@ -6,11 +6,13 @@
 struct Interpreter {
    Interpreter(ASTArena &arena);
    ValueId evaluate(NodeList program, Environment &environment);
+   ValueId callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line);
 
    // statement evaluation
 
    ValueId evaluateStmt(Environment &environment, NodeId node);
    ValueId evaluateVarDecl(Environment &environment, NodeId node);
+   ValueId evaluateFnDecl(Environment &environment, NodeId node);
 
    // expression evaluation
 
