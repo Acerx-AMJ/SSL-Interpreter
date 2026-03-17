@@ -1,5 +1,6 @@
 #include "environment.hpp"
 #include "error.hpp"
+#include "interpreter.hpp"
 
 Environment::Environment(Environment *parent)
    : parent(parent) {}
@@ -9,16 +10,12 @@ Environment::Environment()
 
 }
 
-void Environment::declare(const std::string &identifier, ValueId value, size_t line) {
+void Environment::declare(Interpreter &interpreter, bool isConstant, const std::string &identifier, ValueId value, size_t line) {
    if (variables.find(identifier) != variables.end()) {
       raiseError(line, "Cannot shadow variable in the same scope.");
    }
    variables[identifier] = value;
-}
-
-void Environment::assign(const std::string &identifier, ValueId value, size_t line) {
-   Environment &env = resolve(identifier, line);
-   env.variables[identifier] = value;
+   interpreter.valuePool[value].constant = isConstant;
 }
 
 bool Environment::exists(const std::string &identifier) {

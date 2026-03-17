@@ -11,8 +11,7 @@ struct Environment {
    Environment(Environment *parent);
    Environment();
 
-   void declare(const std::string &identifier, ValueId value, size_t line);
-   void assign(const std::string &identifier, ValueId value, size_t line);
+   void declare(Interpreter &interpreter, bool constant, const std::string &identifier, ValueId value, size_t line);
    bool exists(const std::string &identifier);
    ValueId get(const std::string &identifier, size_t line);
    Environment &resolve(const std::string &identifier, size_t line);

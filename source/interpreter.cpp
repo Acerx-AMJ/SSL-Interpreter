@@ -33,12 +33,11 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
 }
 
 ValueId Interpreter::callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line) {
-   Node &f = arena.get(function);
    ValueId left = evaluateExpr(environment, function);
    Value &l = valuePool[left];
 
    if (l.type != ValueType::function) {
-      raiseError(f.line, "Cannot call %s value.", getValueTypeAsString(l.type));
+      raiseError(line, "Cannot call %s value.", getValueTypeAsString(l.type));
    }
    
    Node &stmt = arena.get(l.function.function);
@@ -57,14 +56,14 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
    }
 
    if (params->size != args.size()) {
-      raiseError(f.line, "Expected argument count (%lu) to match parameter count (%lu).",
+      raiseError(line, "Expected argument count (%lu) to match parameter count (%lu).",
          args.size(), params->size);
    }
 
    Environment newEnvironment (parent);
    for (size_t i = 0; i < args.size(); ++i) {
       Node &param = arena.get(arena.children[i + params->start]);
-      newEnvironment.declare(arena.strings[param.identifier.id], args[i], f.line);
+      newEnvironment.declare(*this, false, arena.strings[param.identifier.id], copy(args[i]), line);
    }
    return evaluate(*body, newEnvironment);
 }
@@ -83,15 +82,15 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
 
 ValueId Interpreter::evaluateVarDecl(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
-   ValueId value = evaluateExpr(environment, n.varDecl.value);
-   environment.declare(arena.strings[n.varDecl.identifier], value, n.line);
+   ValueId value = copy(evaluateExpr(environment, n.varDecl.value));
+   environment.declare(*this, n.varDecl.isConstant, arena.strings[n.varDecl.identifier], value, n.line);
    return null;
 }
 
 ValueId Interpreter::evaluateFnDecl(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
    ValueId value = allocateFunction(node, &environment, n.line);
-   environment.declare(arena.strings[n.fnDecl.identifier], value, n.line);
+   environment.declare(*this, true, arena.strings[n.fnDecl.identifier], value, n.line);
    return null;
 }
 
@@ -195,6 +194,10 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
    ValueId left = evaluateExpr(environment, n.assignment.left);
    Value &l = valuePool[left];
 
+   if (l.constant) {
+      raiseError(n.line, "Cannot assign to a constant.");
+   }
+
    switch (n.assignment.op) {
    case TokenType::equals:      l = r;                                break;
    case TokenType::plusEquals:  l = valuePool[l.add(*this, r)];       break;
@@ -207,6 +210,7 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
       raiseError(n.line, "Unsupported assignment operator '%s'.", getTokenTypeAsString(n.assignment.op));
    }
 
+   l.constant = r.constant;
    if (n.assignment.op != TokenType::equals) {
       valuePool.pop_back();
    }
@@ -284,4 +288,15 @@ ValueId Interpreter::allocateFunction(NodeId function, Environment *environment,
    Value value {ValueType::function, line};
    value.function = {function, environment};
    return allocate(value);
+}
+
+ValueId Interpreter::copy(ValueId id) {
+   Value value = valuePool[id];
+   switch (value.type) {
+   case ValueType::null:     return null;
+   case ValueType::number:   return allocateNumber(value.number, value.line);
+   case ValueType::boolean:  return allocateBoolean(value.boolean, value.line);
+   case ValueType::string:   return allocateString(value.string, value.line);
+   case ValueType::function: return allocateFunction(value.function.function, value.function.env, value.line);
+   }
 }

@@ -35,7 +35,7 @@ NodeId Parser::parseStmt() {
    }
 
    keyword = current().type;
-   if (peek(TokenType::colonEquals)) {
+   if (peek(TokenType::colonEquals) || peek(TokenType::colonColon)) {
       return parseVarDecl(isPublic);
    }
    else if (keyword == TokenType::kfn) {
@@ -91,12 +91,13 @@ NodeId Parser::parseVarDecl(bool isPublic) {
 
    expect(StmtType::varDecl, TokenType::identifier);
    std::string identifier = current().lexeme;
-
    advance();
+
+   bool isConstant = is(TokenType::colonColon);
    advance(); // we know this from 'parseStmt'
 
    NodeId value = parseExpr();
-   return arena.allocateVarDecl(isPublic, identifier, value, originalLine);
+   return arena.allocateVarDecl(isPublic, isConstant, identifier, value, originalLine);
 }
 
 NodeId Parser::parseFnDecl(bool isPublic) {

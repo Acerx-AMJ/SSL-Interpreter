@@ -6,7 +6,7 @@
 
 enum class TokenType: char {
    eof, identifier, number, string,
-   colonEquals, equals, plusEquals, minusEquals, starEquals, slashEquals,
+   colonEquals, colonColon, equals, plusEquals, minusEquals, starEquals, slashEquals,
    modEquals, powEquals, plus, minus, star, slash, mod, pow,
    nullOr, divisible, equalsEquals, notEquals, bigger, biggerEquals, smaller, smallerEquals,
    lparen, rparen, lbracket, rbracket, comma, dot, nullDot,
@@ -20,7 +20,7 @@ enum class TokenType: char {
 
 constexpr const char *tokenTypeStrings[] {
    "EOF", "Identifier", "Number", "String",
-   ":=", "=", "+=", "-=", "*=", "/=",
+   ":=", "::", "=", "+=", "-=", "*=", "/=",
    "%=", "**=", "+", "-", "*", "/", "%", "**",
    "??", "%%", "==", "!=", ">", ">=", "<", "<=",
    "(", ")", "[", "]", ",", ".", "?.",
@@ -45,6 +45,7 @@ struct Token {
 static inline constexpr size_t maxOperatorSize = 3;
 static inline const std::unordered_map<std::string_view, TokenType> operators {
    {":=",  TokenType::colonEquals},
+   {"::",  TokenType::colonColon},
    {"=",   TokenType::equals},
    {"+=",  TokenType::plusEquals},
    {"-=",  TokenType::minusEquals},

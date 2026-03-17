@@ -204,9 +204,9 @@ NodeId ASTArena::allocate(Node node) {
    return index;
 }
 
-NodeId ASTArena::allocateVarDecl(bool isPublic, const std::string &identifier, NodeId value, size_t line) {
+NodeId ASTArena::allocateVarDecl(bool isPublic, bool isConstant, const std::string &identifier, NodeId value, size_t line) {
    Node node {StmtType::varDecl, line};
-   node.varDecl = {isPublic, pushString(identifier), value};
+   node.varDecl = {isPublic, isConstant, pushString(identifier), value};
    return allocate(node);
 }
 

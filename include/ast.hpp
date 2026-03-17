@@ -39,6 +39,7 @@ struct NodeList {
 
 struct VarDecl {
    bool isPublic;
+   bool isConstant;
    StringId identifier;
    NodeId value;
 };
@@ -247,7 +248,7 @@ struct ASTArena {
    // builders
 
    NodeId allocate(Node node);
-   NodeId allocateVarDecl(bool isPublic, const std::string &identifier, NodeId value, size_t line);
+   NodeId allocateVarDecl(bool isPublic, bool isConstant, const std::string &identifier, NodeId value, size_t line);
    NodeId allocateFnDecl(bool isPublic, const std::string &module, const std::string &identifier, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
    NodeId allocateLambda(const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
    NodeId allocateEnumDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &entries, size_t line);

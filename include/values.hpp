@@ -46,6 +46,7 @@ struct Value {
    
    ValueType type;
    size_t line;
+   bool constant = false;
 
    union {
       long double number;
