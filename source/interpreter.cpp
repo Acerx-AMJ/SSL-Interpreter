@@ -179,7 +179,31 @@ ValueId Interpreter::evaluatePropertyAccess(Environment &environment, NodeId nod
 }
 
 ValueId Interpreter::evaluateArraySubscript(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   ValueId left = evaluateExpr(environment, n.arraySubscript.left);
+   Value &l = valuePool[left];
 
+   ValueId right = evaluateExpr(environment, n.arraySubscript.expression);
+   Value &r = valuePool[right];
+
+   if (l.type != ValueType::array) {
+      raiseError(n.line, "Expected Array value on the left side of the Array Subscript statement, "
+                         "got %s instead.", getValueTypeAsString(l.type));
+   }
+
+   if (r.type != ValueType::number) {
+      raiseError(n.line, "Expected Number value on the right side of the Array Subscript statement, "
+                         "got %s instead.", getValueTypeAsString(r.type));
+   }
+
+   std::vector<ValueId> &array = arrayPool[l.array];
+   size_t index = r.number;
+
+   if (index >= array.size()) {
+      raiseError(n.line, "Array Subscript index out of bounds. %lu (rounded from %s) >= %lu.",
+         index, r.asString(*this).c_str(), array.size());
+   }
+   return array[index];
 }
 
 ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
