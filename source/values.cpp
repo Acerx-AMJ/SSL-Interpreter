@@ -87,53 +87,62 @@ ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
    return interpreter.allocateNumber(powl(number, r.number), line);
 }
 
-ValueId Value::equal(Interpreter &interpreter, const Value &r) const {
-   if (type != r.type)              return interpreter.allocateBoolean(false, line);
-   if (type == ValueType::null)     return interpreter.allocateBoolean(true, line);
-   if (type == ValueType::number)   return interpreter.allocateBoolean(number == r.number, line);
-   if (type == ValueType::boolean)  return interpreter.allocateBoolean(boolean == r.boolean, line);
-   if (type == ValueType::function) return interpreter.allocateBoolean(function.function == r.function.function, line);
-   
+bool Value::equal(Interpreter &interpreter, const Value &r) const {
+   if (type != r.type)              return false;
+   if (type == ValueType::null)     return true;
+   if (type == ValueType::number)   return number == r.number;
+   if (type == ValueType::boolean)  return boolean == r.boolean;
+   if (type == ValueType::function) return function.function == r.function.function;
+
+   if (type == ValueType::array) {
+      const std::vector<ValueId> &first  = interpreter.arrayPool[array];
+      const std::vector<ValueId> &second = interpreter.arrayPool[r.array];
+      if (first.size() != second.size()) return false;
+
+      for (size_t i = 0; i < first.size(); ++i) {
+         const Value &firstValue  = interpreter.valuePool[first[i]];
+         const Value &secondValue = interpreter.valuePool[second[i]];
+
+         if (!firstValue.equal(interpreter, secondValue)) {
+            return false;
+         }
+      }
+      return true;
+   }
+
    const std::string &first  = interpreter.arena.strings[string];
    const std::string &second = interpreter.arena.strings[r.string];
-   return interpreter.allocateBoolean(first == second, line);
+   return first == second;
 }
 
-ValueId Value::notEqual(Interpreter &interpreter, const Value &r) const {
-   ValueId isEqual = equal(interpreter, r);
-   bool &result = interpreter.valuePool[isEqual].boolean;
-   result = !result;
-   return isEqual;
-}
-
-ValueId Value::greater(Interpreter &interpreter, const Value &r) const {
+bool Value::greater(Interpreter &interpreter, const Value &r) const {
    if (type == ValueType::number && r.type == ValueType::number) {
-      return interpreter.allocateBoolean(number > r.number, line);
+      return number > r.number;
+   }
+
+   if (type == ValueType::array && r.type == ValueType::array) {
+      const std::vector<ValueId> &first  = interpreter.arrayPool[array];
+      const std::vector<ValueId> &second = interpreter.arrayPool[r.array];
+      size_t size = std::min(first.size(), second.size());
+
+      for (size_t i = 0; i < size; ++i) {
+         const Value &firstValue  = interpreter.valuePool[first[i]];
+         const Value &secondValue = interpreter.valuePool[second[i]];
+         if (!firstValue.equal(interpreter, secondValue)) {
+            return firstValue.greater(interpreter, secondValue);
+         }
+      }
+      return first.size() > second.size();
    }
 
    if (type == ValueType::string && r.type == ValueType::string) {
       const std::string &first  = interpreter.arena.strings[string];
       const std::string &second = interpreter.arena.strings[r.string];
-      return interpreter.allocateBoolean(first > second, line);
+      return first > second;
    }
 
    raiseError(line, "Cannot compare %s value and %s value.",
       getValueTypeAsString(type), getValueTypeAsString(r.type));
-}
-
-ValueId Value::greaterEqual(Interpreter &interpreter, const Value &r) const {
-   return r.smallerEqual(interpreter, *this);
-}
-
-ValueId Value::smaller(Interpreter &interpreter, const Value &r) const {
-   return r.greater(interpreter, *this);
-}
-
-ValueId Value::smallerEqual(Interpreter &interpreter, const Value &r) const {
-   ValueId isGreater = greater(interpreter, r);
-   bool &result = interpreter.valuePool[isGreater].boolean;
-   result = !result;
-   return isGreater;
 }
 
 std::string Value::asString(Interpreter &interpreter) const {
@@ -159,5 +168,6 @@ bool Value::asBoolean(Interpreter &interpreter) const {
    if (type == ValueType::number)  return number != 0.0;
    if (type == ValueType::boolean) return boolean;
    if (type == ValueType::string)  return !interpreter.arena.strings[string].empty();
+   if (type == ValueType::array)   return true;
    raiseError(line, "Cannot convert %s value to Boolean value.", getValueTypeAsString(type));
 }

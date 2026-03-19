@@ -3,6 +3,7 @@
 
 Interpreter::Interpreter(ASTArena &arena)
    : arena(arena) {
+   arrayPool.reserve(128);
    valuePool.reserve(256);
    valuePool.push_back({}); // null
 }
@@ -26,6 +27,9 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
          break;
       case ValueType::function:
          printf("function/lambda\n");
+         break;
+      case ValueType::array:
+         printf("array %lu\n", arrayPool[valuePool[last].array].size());
          break;
       }
    }
@@ -143,12 +147,12 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
    case TokenType::slash:         return l.divide(*this, r);
    case TokenType::mod:           return l.remainder(*this, r);
    case TokenType::pow:           return l.pow(*this, r);
-   case TokenType::bigger:        return l.greater(*this, r);
-   case TokenType::biggerEquals:  return l.greaterEqual(*this, r);
-   case TokenType::smaller:       return l.smaller(*this, r);
-   case TokenType::smallerEquals: return l.smallerEqual(*this, r);
-   case TokenType::equalsEquals:  return l.equal(*this, r);
-   case TokenType::notEquals:     return l.notEqual(*this, r);
+   case TokenType::bigger:        return allocateBoolean(l.greater(*this, r), l.line);
+   case TokenType::biggerEquals:  return allocateBoolean(!r.greater(*this, l), l.line);
+   case TokenType::smaller:       return allocateBoolean(r.greater(*this, l), l.line);
+   case TokenType::smallerEquals: return allocateBoolean(!l.greater(*this, r), l.line);
+   case TokenType::equalsEquals:  return allocateBoolean(l.equal(*this, r), l.line);
+   case TokenType::notEquals:     return allocateBoolean(!l.equal(*this, r), l.line);
    case TokenType::divisible: {
       ValueId result = l.remainder(*this, r);
       return allocateBoolean(!valuePool[result].asBoolean(*this), n.line);
@@ -248,6 +252,15 @@ ValueId Interpreter::evaluatePrimaryExpr(Environment &environment, NodeId node) 
    case StmtType::program: {
       Environment child (&environment);
       return evaluate(n.program.nodes, child);
+   } case StmtType::array: {
+      NodeList &l = n.array.values;
+      std::vector<ValueId> array;
+      array.reserve(l.size);
+
+      for (size_t i = l.start; i < l.start + l.size; ++i) {
+         array.push_back(evaluateExpr(environment, arena.children[i]));
+      }
+      return allocateArray(array, n.line);
    } default:
       raiseError(n.line, "Unexpected expression while evaluating: '%s'.",
          getStatementTypeAsString(n.type));
@@ -292,6 +305,13 @@ ValueId Interpreter::allocateFunction(NodeId function, Environment *environment,
    return allocate(value);
 }
 
+ValueId Interpreter::allocateArray(const std::vector<ValueId> &array, size_t line) {
+   Value value {ValueType::array, line};
+   value.array = arrayPool.size();
+   arrayPool.push_back(array);
+   return allocate(value);
+}
+
 ValueId Interpreter::copy(ValueId id) {
    Value value = valuePool[id];
    switch (value.type) {
@@ -300,6 +320,7 @@ ValueId Interpreter::copy(ValueId id) {
    case ValueType::boolean:  return allocateBoolean(value.boolean, value.line);
    case ValueType::string:   return allocateString(value.string, value.line);
    case ValueType::function: return allocateFunction(value.function.function, value.function.env, value.line);
+   case ValueType::array:    return allocateArray(arrayPool[value.array], value.line);
    default: 
       raiseError(value.line, "Cannot copy %s value.", getValueTypeAsString(value.type));
    }

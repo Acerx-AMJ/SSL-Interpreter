@@ -4,11 +4,11 @@
 #include "ast.hpp"
 
 enum class ValueType: char {
-   null, number, boolean, string, function
+   null, number, boolean, string, function, array
 };
 
 constexpr const char *valueTypeStrings[] {
-   "Null", "Number", "Boolean", "String", "Function"
+   "Null", "Number", "Boolean", "String", "Function", "Array"
 };
 
 constexpr const char *getValueTypeAsString(ValueType type) {
@@ -17,6 +17,7 @@ constexpr const char *getValueTypeAsString(ValueType type) {
 
 struct Interpreter;
 using ValueId = uint32_t;
+using ArrayId = uint32_t;
 
 struct FunctionValue {
    NodeId function;
@@ -31,12 +32,9 @@ struct Value {
    ValueId divide(Interpreter &interpreter, const Value &right) const;
    ValueId remainder(Interpreter &interpreter, const Value &right) const;
    ValueId pow(Interpreter &interpreter, const Value &right) const;
-   ValueId equal(Interpreter &interpreter, const Value &right) const;
-   ValueId notEqual(Interpreter &interpreter, const Value &right) const;
-   ValueId greater(Interpreter &interpreter, const Value &right) const;
-   ValueId greaterEqual(Interpreter &interpreter, const Value &right) const;
-   ValueId smaller(Interpreter &interpreter, const Value &right) const;
-   ValueId smallerEqual(Interpreter &interpreter, const Value &right) const;
+
+   bool equal(Interpreter &interpreter, const Value &right) const;
+   bool greater(Interpreter &interpreter, const Value &right) const;
 
    std::string asString(Interpreter &interpreter) const;
    long double asNumber(Interpreter &interpreter) const;
@@ -53,6 +51,7 @@ struct Value {
       bool boolean;
       StringId string;
       FunctionValue function;
+      ArrayId array;
    };
 };
 
