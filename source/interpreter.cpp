@@ -63,7 +63,9 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
    Environment newEnvironment (parent);
    for (size_t i = 0; i < args.size(); ++i) {
       Node &param = arena.get(arena.children[i + params->start]);
-      newEnvironment.declare(*this, false, arena.strings[param.identifier.id], copy(args[i]), line);
+      ValueId arg = param.ref ? args[i] : copy(args[i]);
+
+      newEnvironment.declare(*this, valuePool[arg].constant, arena.strings[param.identifier.id], arg, line);
    }
    return evaluate(*body, newEnvironment);
 }
@@ -161,9 +163,9 @@ ValueId Interpreter::evaluateUnaryExpr(Environment &environment, NodeId node) {
    Value &v = valuePool[value];
 
    switch (n.unary.op) {
-   case TokenType::plus:  return value;
-   case TokenType::minus: return v.negate(*this);
-   case TokenType::knot:  return allocateBoolean(!v.asBoolean(*this), v.line);
+   case TokenType::plus:      return value;
+   case TokenType::minus:     return v.negate(*this);
+   case TokenType::knot:      return allocateBoolean(!v.asBoolean(*this), v.line);
    default: raiseError(n.line, "Unsupported unary operator '%s'.", getTokenTypeAsString(n.unary.op));
    }
 }
@@ -298,5 +300,7 @@ ValueId Interpreter::copy(ValueId id) {
    case ValueType::boolean:  return allocateBoolean(value.boolean, value.line);
    case ValueType::string:   return allocateString(value.string, value.line);
    case ValueType::function: return allocateFunction(value.function.function, value.function.env, value.line);
+   default: 
+      raiseError(value.line, "Cannot copy %s value.", getValueTypeAsString(value.type));
    }
 }

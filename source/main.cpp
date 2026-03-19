@@ -15,6 +15,9 @@ int main(int argc, char *argv[]) {
 
    Lexer lexer (input);
    std::vector<Token> &tokens = lexer.lex();
+   // for (Token &token: tokens) {
+   //    printf("%zu: %s Type: %s\n", token.line, token.lexeme.c_str(), getTokenTypeAsString(token.type));
+   // }
 
    Parser parser (tokens);
    Program &program = parser.parse();

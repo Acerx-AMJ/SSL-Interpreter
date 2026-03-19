@@ -194,6 +194,7 @@ struct Program {
 // Node logic
 
 struct Node {
+   bool ref = false;
    StmtType type;
    size_t line;
 

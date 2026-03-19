@@ -9,7 +9,7 @@ enum class TokenType: char {
    colonEquals, colonColon, equals, plusEquals, minusEquals, starEquals, slashEquals,
    modEquals, powEquals, plus, minus, star, slash, mod, pow,
    nullOr, divisible, equalsEquals, notEquals, bigger, biggerEquals, smaller, smallerEquals,
-   lparen, rparen, lbracket, rbracket, comma, dot, nullDot,
+   lparen, rparen, lbracket, rbracket, comma, dot, nullDot, reference,
    kand, kor, knot,
    kif, kelif, kelse, kend, kmatch, kcase,
    kenum, kfn, klambda, kstruct,
@@ -23,7 +23,7 @@ constexpr const char *tokenTypeStrings[] {
    ":=", "::", "=", "+=", "-=", "*=", "/=",
    "%=", "**=", "+", "-", "*", "/", "%", "**",
    "??", "%%", "==", "!=", ">", ">=", "<", "<=",
-   "(", ")", "[", "]", ",", ".", "?.",
+   "(", ")", "[", "]", ",", ".", "?.", "&",
    "and", "or", "not",
    "if", "elif", "else", "end", "match", "case",
    "enum", "fn", "lambda", "struct",
@@ -74,6 +74,7 @@ static inline const std::unordered_map<std::string_view, TokenType> operators {
    {",",   TokenType::comma},
    {".",   TokenType::dot},
    {"?.",  TokenType::nullDot},
+   {"&",   TokenType::reference},
 };
 
 static inline const std::unordered_map<std::string_view, TokenType> keywords {
