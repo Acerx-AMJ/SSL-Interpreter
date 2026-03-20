@@ -112,6 +112,7 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
    switch (n.type) {
    case StmtType::varDecl: return evaluateVarDecl(environment, node);
    case StmtType::fnDecl:  return evaluateFnDecl(environment, node);
+   case StmtType::ifStmt:  return evaluateIfStmt(environment, node);
    default:                return evaluateExpr(environment, node);
    }
 }
@@ -136,6 +137,35 @@ ValueId Interpreter::evaluateFnDecl(Environment &environment, NodeId node) {
    ValueId value = allocateFunction(node, &environment, n.line);
    environment.declare(*this, true, arena.strings[n.fnDecl.identifier], value, n.line);
    return null;
+}
+
+ValueId Interpreter::evaluateIfStmt(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   Node &ifs = arena.get(n.ifStmt.ifClause);
+   ValueId ifResult = evaluateExpr(environment, ifs.ifClause.expression);
+   Value &result = valuePool[ifResult];
+
+   if (result.asBoolean(*this)) {
+      return evaluate(ifs.ifClause.statement, environment);
+   }
+
+   NodeList elifs = n.ifStmt.elifClauses;
+   for (size_t i = elifs.start; i < elifs.start + elifs.size; ++i) {
+      Node &elif = arena.get(arena.children[i]);
+      ValueId elifResult = evaluateExpr(environment, elif.ifClause.expression);
+      Value &result = valuePool[elifResult];
+
+      if (result.asBoolean(*this)) {
+         return evaluate(elif.ifClause.statement, environment);
+      }
+   }
+
+   if (n.ifStmt.elseClause == null) {
+      return null;
+   }
+
+   Node &elses = arena.get(n.ifStmt.elseClause);
+   return evaluate(elses.ifClause.statement, environment);
 }
 
 // expression evaluation
