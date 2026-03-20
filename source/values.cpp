@@ -3,53 +3,25 @@
 #include "values.hpp"
 #include <cmath>
 
-void Value::print(Interpreter &interpreter) {
-   switch (type) {
-   case ValueType::null:
-      printf("null");
-      break;
-   case ValueType::number:
-   case ValueType::boolean:
-      printf("%s", asString(interpreter).c_str());
-      break;
-   case ValueType::string:
-      printf("%s", interpreter.arena.strings[string].c_str());
-      break;
-   case ValueType::function:
-   case ValueType::ntFunction:
-      printf("[function]");
-      break;
-   case ValueType::array:
-      printf("[ ");
-      for (ValueId id: interpreter.arrayPool[array]) {
-         Value &value = interpreter.valuePool[id];
-         value.print(interpreter);
-         printf(", ");
-      }
-      printf("]");
-      break;
-   }
-}
-
-std::string Value::asPrintableString(Interpreter &interpreter) {
+std::string Value::asPrintable(Interpreter &interpreter) {
    switch (type) {
    case ValueType::null:
       return "null";
    case ValueType::number:
    case ValueType::boolean:
    case ValueType::string:
-      return asString(interpreter).c_str();
+      return asString(interpreter);
    case ValueType::function:
    case ValueType::ntFunction:
       return "[function]";
-   case ValueType::array: {
+   case ValueType::array:
       std::string result = "[ ";
       for (ValueId id: interpreter.arrayPool[array]) {
          Value &value = interpreter.valuePool[id];
-         result += value.asPrintableString(interpreter) + ", ";
+         result += value.asPrintable(interpreter) + ", ";
       }
       return result + "]";
-   }}
+   }
 }
 
 ValueId Value::negate(Interpreter &interpreter) const {

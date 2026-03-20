@@ -25,8 +25,7 @@ struct FunctionValue {
 };
 
 struct Value {
-   void print(Interpreter &interpreter);
-   std::string asPrintableString(Interpreter &interpreter);
+   std::string asPrintable(Interpreter &interpreter);
 
    ValueId negate(Interpreter &interpreter) const;
    ValueId add(Interpreter &interpreter, const Value &right) const;

@@ -1,14 +1,14 @@
 #include "error.hpp"
 #include "interpreter.hpp"
 #include "nativeFunctions.hpp"
+#include <fmt/args.h>
 
 // print utility
 
 ValueId ntfPrint(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
    for (ValueId id: args) {
       Value &value = interpreter.valuePool[id];
-      value.print(interpreter);
-      putchar(' ');
+      fmt::print("{} ", value.asPrintable(interpreter));
    }
    return null;
 }
@@ -19,48 +19,80 @@ ValueId ntfPrintln(const std::vector<ValueId> &args, Interpreter &interpreter, s
    return null;
 }
 
-std::string ntfFormatBase(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line, const char *fname) {
+std::string formatValues(const std::string &fmtStr, const std::vector<ValueId> &args, Interpreter &interpreter) {
+   fmt::dynamic_format_arg_store<fmt::format_context> store;
+
+   for (size_t i = 1; i < args.size(); ++i) {
+      Value &value = interpreter.valuePool[args[i]];
+      if (value.type == ValueType::number) {
+         store.push_back(value.number);
+      } else {
+         store.push_back(value.asPrintable(interpreter));
+      }
+   }
+   return fmt::vformat(fmtStr, store);
+}
+
+ValueId ntfPrintf(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
    if (args.size() < 1) {
-      raiseError(line, "%s: expected at least 1 argument.", fname);
+      raiseError(line, "printf: expected at least 1 argument.");
    }
 
    Value &stringValue = interpreter.valuePool[args[0]];
    if (stringValue.type != ValueType::string) {
-      raiseError(line, "%s: expected first argument to be a string but it is %s instead., fname",
+      raiseError(line, "printf: expected first argument to be a string but it is %s instead.",
          getValueTypeAsString(stringValue.type));
    }
 
-   std::string result = interpreter.arena.strings[stringValue.string];
-   size_t position = 0;
-
-   for (size_t i = 1; i < args.size(); ++i) {
-      Value &arg = interpreter.valuePool[args[i]];
-      position = result.find("{}", position);
-
-      if (position != std::string::npos) {
-         result.replace(position, 2, arg.asPrintableString(interpreter));
-      }
+   try {
+      std::string result = interpreter.arena.strings[stringValue.string];
+      printf("%s", formatValues(result, args, interpreter).c_str());
+      return null;
    }
-
-   if (position == std::string::npos || result.find("{}") != std::string::npos) {
-      raiseError(line, "%s: brace count does not match argument count.", fname);
+   catch (...) {
+      raiseError(line, "printf: brace count does not match argument count/the formatting is invalid.");
    }
-   return result;
-}
-
-ValueId ntfPrintf(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   printf("%s", ntfFormatBase(args, interpreter, line, "printf").c_str());
-   return null;
 }
 
 ValueId ntfPrintfln(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   printf("%s\n", ntfFormatBase(args, interpreter, line, "printfln").c_str());
-   return null;
+   if (args.size() < 1) {
+      raiseError(line, "printfln: expected at least 1 argument.");
+   }
+
+   Value &stringValue = interpreter.valuePool[args[0]];
+   if (stringValue.type != ValueType::string) {
+      raiseError(line, "printfln: expected first argument to be a string but it is %s instead.",
+         getValueTypeAsString(stringValue.type));
+   }
+
+   try {
+      std::string result = interpreter.arena.strings[stringValue.string];
+      printf("%s\n", formatValues(result, args, interpreter).c_str());
+      return null;
+   }
+   catch (...) {
+      raiseError(line, "printfln: brace count does not match argument count/the formatting is invalid.");
+   }
 }
 
 ValueId ntfFormat(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   std::string format = ntfFormatBase(args, interpreter, line, "format");
-   return interpreter.allocateString(format, line);
+   if (args.size() < 1) {
+      raiseError(line, "format: expected at least 1 argument.");
+   }
+
+   Value &stringValue = interpreter.valuePool[args[0]];
+   if (stringValue.type != ValueType::string) {
+      raiseError(line, "format: expected first argument to be a string but it is %s instead.",
+         getValueTypeAsString(stringValue.type));
+   }
+
+   try {
+      std::string result = interpreter.arena.strings[stringValue.string];
+      return interpreter.allocateString(formatValues(result, args, interpreter), line);
+   }
+   catch (...) {
+      raiseError(line, "format: brace count does not match argument count/the formatting is invalid.");
+   }
 }
 
 // native map
