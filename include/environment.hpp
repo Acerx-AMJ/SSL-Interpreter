@@ -9,7 +9,7 @@ struct Environment {
    Environment(Environment &&) = delete;
 
    Environment(Environment *parent);
-   Environment();
+   Environment(Interpreter &interpreter);
 
    void declare(Interpreter &interpreter, bool constant, const std::string &identifier, ValueId value, size_t line);
    bool exists(const std::string &identifier);

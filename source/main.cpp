@@ -23,8 +23,8 @@ int main(int argc, char *argv[]) {
    Program &program = parser.parse();
    // parser.arena.printList(program.nodes);
 
-   Environment global;
    Interpreter interpreter (parser.arena);
+   Environment global (interpreter);
    interpreter.evaluate(program.nodes, global);
 
    if (global.exists("main")) {

@@ -10,7 +10,7 @@ void setProgramCode(const std::string *code) {
    ::code = code;
 }
 
-void raiseError(unsigned line, const char *error, ...) {
+void raiseError(size_t line, const char *error, ...) {
    if (!code) {
       exit(EXIT_FAILURE);
    }
@@ -44,7 +44,7 @@ void raiseError(unsigned line, const char *error, ...) {
 
    // Can the line ever be empty? I don't know
    if (!currentText.empty()) {
-      printf("%-5u %s\n", line, currentText.c_str());
+      printf("%-5lu %s\n", line, currentText.c_str());
       printf("%-5s ", std::string(std::to_string(line).size(), ' ').c_str());
 
       #ifdef unix

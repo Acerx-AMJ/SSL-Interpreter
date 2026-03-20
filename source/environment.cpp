@@ -5,9 +5,11 @@
 Environment::Environment(Environment *parent)
    : parent(parent) {}
 
-Environment::Environment()
+Environment::Environment(Interpreter &interpreter)
    : parent(nullptr) {
-
+   declare(interpreter, true, "null", null, 0);
+   declare(interpreter, true, "true", interpreter.allocateBoolean(true, 0), 0);
+   declare(interpreter, true, "false", interpreter.allocateBoolean(false, 0), 0);
 }
 
 void Environment::declare(Interpreter &interpreter, bool isConstant, const std::string &identifier, ValueId value, size_t line) {

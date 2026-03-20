@@ -4,11 +4,11 @@
 #include "ast.hpp"
 
 enum class ValueType: char {
-   null, number, boolean, string, function, array
+   null, number, boolean, string, function, ntFunction, array
 };
 
 constexpr const char *valueTypeStrings[] {
-   "Null", "Number", "Boolean", "String", "Function", "Array"
+   "Null", "Number", "Boolean", "String", "Function", "Native Function", "Array"
 };
 
 constexpr const char *getValueTypeAsString(ValueType type) {
@@ -25,6 +25,8 @@ struct FunctionValue {
 };
 
 struct Value {
+   void print(Interpreter &interpreter);
+
    ValueId negate(Interpreter &interpreter) const;
    ValueId add(Interpreter &interpreter, const Value &right) const;
    ValueId subtract(Interpreter &interpreter, const Value &right) const;
@@ -51,6 +53,7 @@ struct Value {
       bool boolean;
       StringId string;
       FunctionValue function;
+      StringId nativeFn;
       ArrayId array;
    };
 };

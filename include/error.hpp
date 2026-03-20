@@ -5,7 +5,7 @@
 
 void setProgramCode(const std::string *code);
 
-[[noreturn]] void raiseError(unsigned line, const char *error, ...);
+[[noreturn]] void raiseError(size_t line, const char *error, ...);
 [[noreturn]] void raiseErrorNoLine(const char *error, ...);
 
 #endif

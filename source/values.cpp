@@ -3,6 +3,34 @@
 #include "values.hpp"
 #include <cmath>
 
+void Value::print(Interpreter &interpreter) {
+   switch (type) {
+   case ValueType::null:
+      printf("null");
+      break;
+   case ValueType::number:
+   case ValueType::boolean:
+      printf("%s", asString(interpreter).c_str());
+      break;
+   case ValueType::string:
+      printf("\"%s\"", interpreter.arena.strings[string].c_str());
+      break;
+   case ValueType::function:
+   case ValueType::ntFunction:
+      printf("[function]");
+      break;
+   case ValueType::array:
+      printf("[ ");
+      for (ValueId id: interpreter.arrayPool[array]) {
+         Value &value = interpreter.valuePool[id];
+         value.print(interpreter);
+         printf(", ");
+      }
+      printf("]");
+      break;
+   }
+}
+
 ValueId Value::negate(Interpreter &interpreter) const {
    if (type == ValueType::null)   return null;
    if (type == ValueType::number) return interpreter.allocateNumber(-number, line);

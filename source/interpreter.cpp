@@ -1,5 +1,6 @@
 #include "interpreter.hpp"
 #include "error.hpp"
+#include "nativeFunctions.hpp"
 
 Interpreter::Interpreter(ASTArena &arena)
    : arena(arena) {
@@ -10,33 +11,18 @@ Interpreter::Interpreter(ASTArena &arena)
 
 ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
    ValueId last;
-   for (size_t index = program.start; index < program.start + program.size; ++index) {
+   for (size_t index = program.start; index < program.start + program.size; ++index)
       last = evaluateStmt(environment, arena.children[index]);
-      switch (valuePool[last].type) {
-      case ValueType::number:
-         printf("%Lf\n", valuePool[last].number);
-         break;
-      case ValueType::string:
-         printf("%s\n", arena.strings[valuePool[last].string].c_str());
-         break;
-      case ValueType::boolean:
-         printf("%s\n", valuePool[last].asString(*this).c_str());
-         break;
-      case ValueType::null:
-         printf("null\n");
-         break;
-      case ValueType::function:
-         printf("function/lambda\n");
-         break;
-      case ValueType::array:
-         printf("array %lu\n", arrayPool[valuePool[last].array].size());
-         break;
-      }
-   }
    return last;
 }
 
 ValueId Interpreter::callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line) {
+   if (arena.get(function).type == StmtType::identifier) {
+      std::string &identifier = arena.strings[arena.get(function).identifier.id];
+      NtFunc func = getNativeFunction(identifier, line);
+      return func(args, *this, line);
+   }
+
    ValueId left = evaluateExpr(environment, function);
    Value &l = valuePool[left];
 
