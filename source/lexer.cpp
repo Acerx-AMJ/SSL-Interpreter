@@ -130,7 +130,7 @@ std::vector<Token> &Lexer::lex() {
          }
 
          if (op.empty()) {
-            raiseError(line, "Unexpected character: '{}'.", ch);
+            raiseError(line, "Unexpected character: '%c'.", ch);
          }
          index += op.size() - 1;
       }

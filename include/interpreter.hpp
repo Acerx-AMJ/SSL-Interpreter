@@ -5,8 +5,10 @@
 
 struct Interpreter {
    Interpreter(ASTArena &arena);
+
    ValueId evaluate(NodeList program, Environment &environment);
    ValueId callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line);
+   void callMain(Environment &environment, int argc, char *argv[]);
 
    // statement evaluation
 
@@ -34,7 +36,6 @@ struct Interpreter {
    ValueId allocateString(const std::string &string, size_t line);
    ValueId allocateFunction(NodeId function, Environment *environment, size_t line);
    ValueId allocateArray(const std::vector<ValueId> &array, size_t line);
-   ValueId copy(ValueId id);
 
    // Members
 

@@ -130,16 +130,8 @@ NodeId Parser::parseFnDecl(bool isPublic) {
          break;
       }
 
-      bool ref = false;
-      if (is(TokenType::reference)) {
-         advance();
-         ref = true;
-      }
-
       expect(StmtType::fnDecl, TokenType::identifier);
       NodeId identifier = parsePrimaryExpr();
-
-      arena.get(identifier).ref = ref;
       parameters.push_back(identifier);
    } while (is(TokenType::comma));
 

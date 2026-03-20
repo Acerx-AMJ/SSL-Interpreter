@@ -13,7 +13,7 @@ void Value::print(Interpreter &interpreter) {
       printf("%s", asString(interpreter).c_str());
       break;
    case ValueType::string:
-      printf("\"%s\"", interpreter.arena.strings[string].c_str());
+      printf("%s", interpreter.arena.strings[string].c_str());
       break;
    case ValueType::function:
    case ValueType::ntFunction:

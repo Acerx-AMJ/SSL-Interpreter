@@ -25,6 +25,10 @@ static const inline std::unordered_map<std::string_view, NtFunc> nativeFunctions
    {"print", ntfPrint}, {"println", ntfPrintln}
 };
 
+bool isNativeFunction(const std::string &identifier) {
+   return nativeFunctions.find(identifier) != nativeFunctions.end();
+}
+
 const NtFunc &getNativeFunction(const std::string &identifier, size_t line) {
    if (nativeFunctions.find(identifier) == nativeFunctions.end()) {
       raiseError(line, "Function '%s' does not exist.", identifier.c_str());

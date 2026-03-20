@@ -19,8 +19,11 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
 ValueId Interpreter::callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line) {
    if (arena.get(function).type == StmtType::identifier) {
       std::string &identifier = arena.strings[arena.get(function).identifier.id];
-      NtFunc func = getNativeFunction(identifier, line);
-      return func(args, *this, line);
+
+      if (isNativeFunction(identifier)) {
+         NtFunc func = getNativeFunction(identifier, line);
+         return func(args, *this, line);
+      }
    }
 
    ValueId left = evaluateExpr(environment, function);
@@ -53,11 +56,52 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
    Environment newEnvironment (parent);
    for (size_t i = 0; i < args.size(); ++i) {
       Node &param = arena.get(arena.children[i + params->start]);
-      ValueId arg = param.ref ? args[i] : copy(args[i]);
+      ValueId arg = args[i];
 
       newEnvironment.declare(*this, valuePool[arg].constant, arena.strings[param.identifier.id], arg, line);
    }
    return evaluate(*body, newEnvironment);
+}
+
+void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
+   if (!global.exists("main")) return;
+   ValueId main = global.get("main", 0);
+   Value &m = valuePool[main];
+
+   if (m.type != ValueType::function) {
+      raiseError(m.line, "Expected 'main' to be a Function but it is %s instead.",
+         getValueTypeAsString(m.type));
+   }
+
+   Node &n = arena.get(m.function.function);
+   Environment newEnvironment (&global);
+   size_t argCount = n.fnDecl.parameters.size;
+
+   if (n.type != StmtType::fnDecl) {
+      raiseError(n.line, "Expected 'main' to be a Function but it is %s instead.",
+         getStatementTypeAsString(n.type));
+   }
+
+   if (argCount > 1) {
+      raiseError(n.line, "Expected 'main' to have 0 or 1 parameters but got %d instead.", argCount);
+   }
+
+   if (argCount == 1) {
+      std::vector<ValueId> args;
+      args.reserve(argc - 2);
+
+      for (int i = 2; i < argc; ++i) {
+         NodeId string = arena.allocateString(argv[i], n.line);
+         ValueId stringValue = allocateString(arena.get(string).string.id, n.line);
+         valuePool[stringValue].constant = true;
+         args.push_back(stringValue);
+      }
+
+      std::string &identifier = arena.strings[arena.get(arena.children[n.fnDecl.parameters.start]).identifier.id];
+      ValueId array = allocateArray(args, n.line);
+      newEnvironment.declare(*this, true, identifier, array, n.line);
+   }
+   evaluate(n.fnDecl.body, newEnvironment);
 }
 
 // statement evaluation
@@ -74,8 +118,16 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
 
 ValueId Interpreter::evaluateVarDecl(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
-   ValueId value = copy(evaluateExpr(environment, n.varDecl.value));
-   environment.declare(*this, n.varDecl.isConstant, arena.strings[n.varDecl.identifier], value, n.line);
+   ValueId value = evaluateExpr(environment, n.varDecl.value);
+
+   bool isConstant = n.varDecl.isConstant;
+   bool isValueConstant = valuePool[value].constant;
+
+   if (!isConstant && isValueConstant) {
+      raiseError(n.line, "Attempted to declare a constant value as a mutable variable.");
+   }
+   
+   environment.declare(*this, isConstant, arena.strings[n.varDecl.identifier], value, n.line);
    return null;
 }
 
@@ -320,18 +372,4 @@ ValueId Interpreter::allocateArray(const std::vector<ValueId> &array, size_t lin
    value.array = arrayPool.size();
    arrayPool.push_back(array);
    return allocate(value);
-}
-
-ValueId Interpreter::copy(ValueId id) {
-   Value value = valuePool[id];
-   switch (value.type) {
-   case ValueType::null:     return null;
-   case ValueType::number:   return allocateNumber(value.number, value.line);
-   case ValueType::boolean:  return allocateBoolean(value.boolean, value.line);
-   case ValueType::string:   return allocateString(value.string, value.line);
-   case ValueType::function: return allocateFunction(value.function.function, value.function.env, value.line);
-   case ValueType::array:    return allocateArray(arrayPool[value.array], value.line);
-   default: 
-      raiseError(value.line, "Cannot copy %s value.", getValueTypeAsString(value.type));
-   }
 }

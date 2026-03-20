@@ -5,6 +5,8 @@
 #include <functional>
 
 using NtFunc = std::function<ValueId(const std::vector<ValueId>&, struct Interpreter&, size_t)>;
+
+bool isNativeFunction(const std::string &identifier);
 const NtFunc &getNativeFunction(const std::string &identifier, size_t line);
 
 #endif
