@@ -31,6 +31,27 @@ void Value::print(Interpreter &interpreter) {
    }
 }
 
+std::string Value::asPrintableString(Interpreter &interpreter) {
+   switch (type) {
+   case ValueType::null:
+      return "null";
+   case ValueType::number:
+   case ValueType::boolean:
+   case ValueType::string:
+      return asString(interpreter).c_str();
+   case ValueType::function:
+   case ValueType::ntFunction:
+      return "[function]";
+   case ValueType::array: {
+      std::string result = "[ ";
+      for (ValueId id: interpreter.arrayPool[array]) {
+         Value &value = interpreter.valuePool[id];
+         result += value.asPrintableString(interpreter) + ", ";
+      }
+      return result + "]";
+   }}
+}
+
 ValueId Value::negate(Interpreter &interpreter) const {
    if (type == ValueType::null)   return null;
    if (type == ValueType::number) return interpreter.allocateNumber(-number, line);

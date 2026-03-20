@@ -91,8 +91,7 @@ void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
       args.reserve(argc - 2);
 
       for (int i = 2; i < argc; ++i) {
-         NodeId string = arena.allocateString(argv[i], n.line);
-         ValueId stringValue = allocateString(arena.get(string).string.id, n.line);
+         ValueId stringValue = allocateString(argv[i], n.line);
          valuePool[stringValue].constant = true;
          args.push_back(stringValue);
       }
