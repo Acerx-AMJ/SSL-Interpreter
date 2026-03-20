@@ -16,6 +16,7 @@ struct Interpreter {
    ValueId evaluateVarDecl(Environment &environment, NodeId node);
    ValueId evaluateFnDecl(Environment &environment, NodeId node);
    ValueId evaluateIfStmt(Environment &environment, NodeId node);
+   ValueId evaluateMatchStmt(Environment &environment, NodeId node);
 
    // expression evaluation
 

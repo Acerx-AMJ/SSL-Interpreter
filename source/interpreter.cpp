@@ -109,10 +109,11 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
 
    switch (n.type) {
-   case StmtType::varDecl: return evaluateVarDecl(environment, node);
-   case StmtType::fnDecl:  return evaluateFnDecl(environment, node);
-   case StmtType::ifStmt:  return evaluateIfStmt(environment, node);
-   default:                return evaluateExpr(environment, node);
+   case StmtType::varDecl:   return evaluateVarDecl(environment, node);
+   case StmtType::fnDecl:    return evaluateFnDecl(environment, node);
+   case StmtType::ifStmt:    return evaluateIfStmt(environment, node);
+   case StmtType::matchStmt: return evaluateMatchStmt(environment, node);
+   default:                  return evaluateExpr(environment, node);
    }
 }
 
@@ -141,11 +142,13 @@ ValueId Interpreter::evaluateFnDecl(Environment &environment, NodeId node) {
 ValueId Interpreter::evaluateIfStmt(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
    Node &ifs = arena.get(n.ifStmt.ifClause);
+
    ValueId ifResult = evaluateExpr(environment, ifs.ifClause.expression);
    Value &result = valuePool[ifResult];
 
    if (result.asBoolean(*this)) {
-      return evaluate(ifs.ifClause.statement, environment);
+      Environment newEnvironment (&environment);
+      return evaluate(ifs.ifClause.statement, newEnvironment);
    }
 
    NodeList elifs = n.ifStmt.elifClauses;
@@ -155,7 +158,8 @@ ValueId Interpreter::evaluateIfStmt(Environment &environment, NodeId node) {
       Value &result = valuePool[elifResult];
 
       if (result.asBoolean(*this)) {
-         return evaluate(elif.ifClause.statement, environment);
+         Environment newEnvironment (&environment);
+         return evaluate(elif.ifClause.statement, newEnvironment);
       }
    }
 
@@ -164,7 +168,71 @@ ValueId Interpreter::evaluateIfStmt(Environment &environment, NodeId node) {
    }
 
    Node &elses = arena.get(n.ifStmt.elseClause);
-   return evaluate(elses.ifClause.statement, environment);
+   Environment newEnvironment (&environment);
+   return evaluate(elses.ifClause.statement, newEnvironment);
+}
+
+ValueId Interpreter::evaluateMatchStmt(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   NodeList cases = n.matchStmt.cases;
+
+   ValueId expression = evaluateExpr(environment, n.matchStmt.expression);
+   Value &expr = valuePool[expression];
+
+   for (size_t i = cases.start; i < cases.start + cases.size; ++i) {
+      Node &mcase = arena.get(arena.children[i]);
+      Node range = arena.get(mcase.ifClause.expression);
+      
+      if (range.type == StmtType::range) {
+         if (expr.type != ValueType::number) {
+            raiseError(mcase.line, "Range can only be used to check against number values.");
+         }
+
+         ValueId left = evaluateExpr(environment, range.range.left);
+         ValueId right = evaluateExpr(environment, range.range.right);
+
+         Value &l = valuePool[left];
+         Value &r = valuePool[right];
+
+         if (l.type != ValueType::number || r.type != ValueType::number) {
+            raiseError(range.line, "Expected both left and right side of the range statement to be "
+                                   "numbers.");
+         }
+
+         if (!range.range.inclusive) {
+            r.number -= 1;
+         }
+
+         if (l.number > r.number) {
+            std::swap(l, r);
+         }
+
+         if (expr.number >= l.number && expr.number <= r.number) {
+            Environment newEnvironment (&environment);
+            return evaluate(mcase.ifClause.statement, newEnvironment);
+         }
+         continue;
+      }
+
+      ValueId caseResult = evaluateExpr(environment, mcase.ifClause.expression);
+      Value &result = valuePool[caseResult];
+
+      if (expression == null) {
+         if (result.asBoolean(*this)) {
+            Environment newEnvironment (&environment);
+            return evaluate(mcase.ifClause.statement, newEnvironment);
+         }
+         continue;
+      }
+
+      if ((result.type == ValueType::boolean && result.boolean)
+       || (result.type != ValueType::boolean && result.equal(*this, expr))) {
+         Environment newEnvironment (&environment);
+         return evaluate(mcase.ifClause.statement, newEnvironment);
+      }
+   }
+   Environment newEnvironment (&environment);
+   return evaluate(arena.get(n.matchStmt.elseClause).ifClause.statement, newEnvironment);
 }
 
 // expression evaluation
