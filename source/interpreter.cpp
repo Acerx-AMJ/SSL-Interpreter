@@ -63,8 +63,10 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
       newEnvironment.declare(*this, valuePool[arg].constant, arena.strings[param.identifier.id], arg, line);
    }
 
-   ValueId result = evaluate(*body, newEnvironment);
+   bool previousReturning = returning;
    returning = false;
+   ValueId result = evaluate(*body, newEnvironment);
+   returning = previousReturning;
    return result;
 }
 

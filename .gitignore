@@ -5,3 +5,4 @@
 /.vs/
 /.clangd
 /*.ssl
+/*.py

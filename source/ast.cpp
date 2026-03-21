@@ -158,7 +158,7 @@ void ASTArena::print(NodeId id, int indentation) const {
       break;
    } case StmtType::call: {
       print(node.fnCall.left, indentation + 1);
-      printf("\n%*sArguments:", indentation + 1, "");
+      printf("\n%*sArguments:", indentation + 2, "");
       printList(node.fnCall.args, indentation + 2);
       break;
    } case StmtType::range: {
