@@ -17,6 +17,8 @@ struct Interpreter {
    ValueId evaluateFnDecl(Environment &environment, NodeId node);
    ValueId evaluateIfStmt(Environment &environment, NodeId node);
    ValueId evaluateMatchStmt(Environment &environment, NodeId node);
+   ValueId evaluateReturnStmt(Environment &environment, NodeId node);
+   ValueId evaluateUnlessStmt(Environment &environment, NodeId node);
 
    // expression evaluation
 
@@ -44,6 +46,8 @@ struct Interpreter {
    ASTArena &arena;
    std::vector<Value> valuePool;
    std::vector<std::vector<ValueId>> arrayPool;
+
+   bool returning = false;
 };
 
 #endif

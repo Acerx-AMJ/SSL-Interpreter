@@ -11,8 +11,10 @@ Interpreter::Interpreter(ASTArena &arena)
 
 ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
    ValueId last;
-   for (size_t index = program.start; index < program.start + program.size; ++index)
+   for (size_t index = program.start; index < program.start + program.size; ++index) {
       last = evaluateStmt(environment, arena.children[index]);
+      if (returning) return last;
+   }
    return last;
 }
 
@@ -60,7 +62,10 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
 
       newEnvironment.declare(*this, valuePool[arg].constant, arena.strings[param.identifier.id], arg, line);
    }
-   return evaluate(*body, newEnvironment);
+
+   ValueId result = evaluate(*body, newEnvironment);
+   returning = false;
+   return result;
 }
 
 void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
@@ -100,7 +105,9 @@ void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
       ValueId array = allocateArray(args, n.line);
       newEnvironment.declare(*this, true, identifier, array, n.line);
    }
+
    evaluate(n.fnDecl.body, newEnvironment);
+   returning = false;
 }
 
 // statement evaluation
@@ -109,11 +116,13 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
 
    switch (n.type) {
-   case StmtType::varDecl:   return evaluateVarDecl(environment, node);
-   case StmtType::fnDecl:    return evaluateFnDecl(environment, node);
-   case StmtType::ifStmt:    return evaluateIfStmt(environment, node);
-   case StmtType::matchStmt: return evaluateMatchStmt(environment, node);
-   default:                  return evaluateExpr(environment, node);
+   case StmtType::varDecl:    return evaluateVarDecl(environment, node);
+   case StmtType::fnDecl:     return evaluateFnDecl(environment, node);
+   case StmtType::ifStmt:     return evaluateIfStmt(environment, node);
+   case StmtType::matchStmt:  return evaluateMatchStmt(environment, node);
+   case StmtType::returnStmt: return evaluateReturnStmt(environment, node);
+   case StmtType::unlessStmt: return evaluateUnlessStmt(environment, node);
+   default:                   return evaluateExpr(environment, node);
    }
 }
 
@@ -233,6 +242,23 @@ ValueId Interpreter::evaluateMatchStmt(Environment &environment, NodeId node) {
    }
    Environment newEnvironment (&environment);
    return evaluate(arena.get(n.matchStmt.elseClause).ifClause.statement, newEnvironment);
+}
+
+ValueId Interpreter::evaluateReturnStmt(Environment &environment, NodeId node) {
+   Node &returnStmt = arena.get(node);
+   returning = true;
+   return evaluateExpr(environment, returnStmt.returnStmt.value);
+}
+
+ValueId Interpreter::evaluateUnlessStmt(Environment &environment, NodeId node) {
+   Node &unlessStmt = arena.get(node);
+   ValueId expression = evaluateExpr(environment, unlessStmt.unlessStmt.expression);
+   Value &expr = valuePool[expression];
+
+   if (expr.asBoolean(*this)) {
+      return null;
+   }
+   return evaluateStmt(environment, unlessStmt.unlessStmt.statement);
 }
 
 // expression evaluation
