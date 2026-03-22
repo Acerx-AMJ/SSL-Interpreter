@@ -7,9 +7,18 @@ Environment::Environment(Environment *parent)
 
 Environment::Environment(Interpreter &interpreter)
    : parent(nullptr) {
+   
+   // globals
    declare(interpreter, true, "null", null, 0);
    declare(interpreter, true, "true", interpreter.allocateBoolean(true, 0), 0);
    declare(interpreter, true, "false", interpreter.allocateBoolean(false, 0), 0);
+
+   // types
+   declare(interpreter, true, "number", interpreter.allocateString("number", 0), 0);
+   declare(interpreter, true, "boolean", interpreter.allocateString("boolean", 0), 0);
+   declare(interpreter, true, "string", interpreter.allocateString("string", 0), 0);
+   declare(interpreter, true, "function", interpreter.allocateString("function", 0), 0);
+   declare(interpreter, true, "array", interpreter.allocateString("array", 0), 0);
 }
 
 void Environment::declare(Interpreter &interpreter, bool isConstant, const std::string &identifier, ValueId value, size_t line) {
