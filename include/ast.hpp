@@ -88,6 +88,7 @@ struct MatchStmt {
 };
 
 struct ForLoop {
+   bool reversed = false;
    StringId identifier;
    NodeId inExpression;
    NodeList body;
@@ -256,7 +257,7 @@ struct ASTArena {
    NodeId allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elifClauses, NodeId elseClause, size_t line);
    NodeId allocateIfClause(TokenType keyword, NodeId expression, const std::vector<NodeId> &statement, size_t line);
    NodeId allocateMatchStmt(NodeId expression, const std::vector<NodeId> &cases, NodeId elseClause, size_t line);
-   NodeId allocateForLoop(const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line);
+   NodeId allocateForLoop(bool reversed, const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line);
    NodeId allocateLoop(const std::vector<NodeId> &body, size_t line);
    NodeId allocateWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line);
    NodeId allocateDoWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line);

@@ -17,6 +17,12 @@ struct Interpreter {
    ValueId evaluateFnDecl(Environment &environment, NodeId node);
    ValueId evaluateIfStmt(Environment &environment, NodeId node);
    ValueId evaluateMatchStmt(Environment &environment, NodeId node);
+   ValueId evaluateForLoop(Environment &environment, NodeId node);
+   ValueId evaluateLoop(Environment &environment, NodeId node);
+   ValueId evaluateWhileLoop(Environment &environment, NodeId node);
+   ValueId evaluateDoWhileLoop(Environment &environment, NodeId node);
+   ValueId evaluateBreak(Environment &environment, NodeId node);
+   ValueId evaluateContinue(Environment &environment, NodeId node);
    ValueId evaluateReturnStmt(Environment &environment, NodeId node);
    ValueId evaluateUnlessStmt(Environment &environment, NodeId node);
 

@@ -118,13 +118,19 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
 
    switch (n.type) {
-   case StmtType::varDecl:    return evaluateVarDecl(environment, node);
-   case StmtType::fnDecl:     return evaluateFnDecl(environment, node);
-   case StmtType::ifStmt:     return evaluateIfStmt(environment, node);
-   case StmtType::matchStmt:  return evaluateMatchStmt(environment, node);
-   case StmtType::returnStmt: return evaluateReturnStmt(environment, node);
-   case StmtType::unlessStmt: return evaluateUnlessStmt(environment, node);
-   default:                   return evaluateExpr(environment, node);
+   case StmtType::varDecl:      return evaluateVarDecl(environment, node);
+   case StmtType::fnDecl:       return evaluateFnDecl(environment, node);
+   case StmtType::ifStmt:       return evaluateIfStmt(environment, node);
+   case StmtType::matchStmt:    return evaluateMatchStmt(environment, node);
+   case StmtType::forLoop:      return evaluateForLoop(environment, node);
+   case StmtType::loop:         return evaluateLoop(environment, node);
+   case StmtType::whileLoop:    return evaluateWhileLoop(environment, node);
+   case StmtType::doWhileLoop:  return evaluateDoWhileLoop(environment, node);
+   case StmtType::breakStmt:    return evaluateBreak(environment, node);
+   case StmtType::continueStmt: return evaluateContinue(environment, node);
+   case StmtType::returnStmt:   return evaluateReturnStmt(environment, node);
+   case StmtType::unlessStmt:   return evaluateUnlessStmt(environment, node);
+   default:                     return evaluateExpr(environment, node);
    }
 }
 
@@ -192,7 +198,7 @@ ValueId Interpreter::evaluateMatchStmt(Environment &environment, NodeId node) {
 
    for (size_t i = cases.start; i < cases.start + cases.size; ++i) {
       Node &mcase = arena.get(arena.children[i]);
-      Node range = arena.get(mcase.ifClause.expression);
+      Node &range = arena.get(mcase.ifClause.expression);
       
       if (range.type == StmtType::range) {
          if (expr.type != ValueType::number) {
@@ -244,6 +250,107 @@ ValueId Interpreter::evaluateMatchStmt(Environment &environment, NodeId node) {
    }
    Environment newEnvironment (&environment);
    return evaluate(arena.get(n.matchStmt.elseClause).ifClause.statement, newEnvironment);
+}
+
+ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   Node &inExpr = arena.get(n.forLoop.inExpression);
+   std::string &identifier = arena.strings[n.forLoop.identifier];
+
+   if (inExpr.type == StmtType::range) {
+      ValueId left = evaluateExpr(environment, inExpr.range.left);
+      ValueId right = evaluateExpr(environment, inExpr.range.right);
+
+      Value &l = valuePool[left];
+      Value &r = valuePool[right];
+
+      if (l.type != ValueType::number || r.type != ValueType::number) {
+         raiseError(inExpr.line, "Expected both left and right side of the range statement to be "
+                                 "numbers.");
+      }
+
+      bool reversed = n.forLoop.reversed;
+      if (!inExpr.range.inclusive) {
+         r.number += l.number > r.number ? 1 : -1;
+      }
+      
+      if (l.number > r.number) {
+         std::swap(l, r);
+         reversed = !reversed;
+      }
+
+      for (long double i = reversed ? r.number : l.number; reversed ? (i >= l.number) : (i <= r.number); reversed ? --i : ++i) {
+         Environment newEnvironment (&environment);
+         newEnvironment.declare(*this, true, identifier, allocateNumber(i, n.line), n.line);
+         evaluate(n.forLoop.body, newEnvironment);
+      }
+      return null;
+   }
+
+   // handle iterating strings and arrays
+   ValueId expression = evaluateExpr(environment, n.forLoop.inExpression);
+   Value &expr = valuePool[expression];
+
+   if (expr.type == ValueType::array) {
+      bool reversed = n.forLoop.reversed;
+      std::vector<ValueId> &array = arrayPool[expr.array];
+
+      for (long i = reversed ? array.size() - 1 : 0; reversed ? (i >= 0) : (i < array.size()); reversed ? --i : ++i) {
+         Environment newEnvironment (&environment);
+         newEnvironment.declare(*this, valuePool[array[i]].constant, identifier, array[i], n.line);
+         evaluate(n.forLoop.body, newEnvironment);
+      }
+      return null;
+   }
+   else if (expr.type == ValueType::string) {
+      // TODO:
+   }
+   else {
+      raiseError(expr.line, "Cannot iterate over %s value.", getValueTypeAsString(expr.type));
+   }
+}
+
+ValueId Interpreter::evaluateLoop(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   while (true) {
+      Environment newEnvironment (&environment);
+      evaluate(n.loop.body, newEnvironment);
+   }
+   return null;
+}
+
+ValueId Interpreter::evaluateWhileLoop(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   while (true) {
+      ValueId expression = evaluateExpr(environment, n.whileLoop.expression);
+      Value &expr = valuePool[expression];
+      if (!expr.asBoolean(*this)) return null;
+
+      Environment newEnvironment (&environment);
+      evaluate(n.whileLoop.statement, newEnvironment);
+   }
+   return null;
+}
+
+ValueId Interpreter::evaluateDoWhileLoop(Environment &environment, NodeId node) {
+   Node &n = arena.get(node);
+   while (true) {
+      Environment newEnvironment (&environment);
+      evaluate(n.whileLoop.statement, newEnvironment);
+
+      ValueId expression = evaluateExpr(environment, n.whileLoop.expression);
+      Value &expr = valuePool[expression];
+      if (!expr.asBoolean(*this)) return null;
+   }
+   return null;
+}
+
+ValueId Interpreter::evaluateBreak(Environment &environment, NodeId node) {
+
+}
+
+ValueId Interpreter::evaluateContinue(Environment &environment, NodeId node) {
+   
 }
 
 ValueId Interpreter::evaluateReturnStmt(Environment &environment, NodeId node) {

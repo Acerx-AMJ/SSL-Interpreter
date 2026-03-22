@@ -13,7 +13,7 @@ enum class TokenType: char {
    kand, kor, knot,
    kif, kelif, kelse, kend, kmatch, kcase,
    kenum, kfn, klambda, kstruct,
-   kfor, kin, kto, kuntil, kloop, kwhile, kdo,
+   kfor, kin, kto, kuntil, kloop, kwhile, kdo, kreversed,
    kcontinue, kbreak, kreturn, kunless,
    kpub, kprv, kimport, kall, kfrom, kas,
 };
@@ -27,7 +27,7 @@ constexpr const char *tokenTypeStrings[] {
    "and", "or", "not",
    "if", "elif", "else", "end", "match", "case",
    "enum", "fn", "lambda", "struct",
-   "for", "in", "to", "until", "loop", "while", "do",
+   "for", "in", "to", "until", "loop", "while", "do", "reversed",
    "continue", "break", "return", "unless",
    "pub", "prv", "import", "all", "from", "as",
 };
@@ -97,6 +97,7 @@ static inline const std::unordered_map<std::string_view, TokenType> keywords {
    {"loop",     TokenType::kloop},
    {"while",    TokenType::kwhile},
    {"do",       TokenType::kdo},
+   {"reversed", TokenType::kreversed},
    {"continue", TokenType::kcontinue},
    {"break",    TokenType::kbreak},
    {"return",   TokenType::kreturn},

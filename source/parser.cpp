@@ -324,6 +324,12 @@ NodeId Parser::parseForLoop() {
 
    NodeId expression = parseRangeExpr();
    std::vector<NodeId> nodes;
+   bool reversed = false;
+
+   if (is(TokenType::kreversed)) {
+      advance();
+      reversed = true;
+   }
 
    while (!is(TokenType::kend)) {
       if (is(TokenType::eof)) {
@@ -335,7 +341,7 @@ NodeId Parser::parseForLoop() {
    }
 
    advance();
-   return arena.allocateForLoop(identifier, expression, nodes, originalLine);
+   return arena.allocateForLoop(reversed, identifier, expression, nodes, originalLine);
 }
 
 NodeId Parser::parseLoop() {

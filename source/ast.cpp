@@ -252,9 +252,9 @@ NodeId ASTArena::allocateMatchStmt(NodeId expression, const std::vector<NodeId> 
    return allocate(node);
 }
 
-NodeId ASTArena::allocateForLoop(const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line) {
+NodeId ASTArena::allocateForLoop(bool reversed, const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line) {
    Node node {StmtType::forLoop, line};
-   node.forLoop = {pushString(identifier), inExpression, pushVector(body)};
+   node.forLoop = {reversed, pushString(identifier), inExpression, pushVector(body)};
    return allocate(node);
 }
 
