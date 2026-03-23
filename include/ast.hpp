@@ -33,8 +33,8 @@ using StringId = uint32_t;
 constexpr NodeId null = 0;
 
 struct NodeList {
-   size_t start = 0;
-   size_t size = 0;
+   size_t start;
+   size_t size;
 };
 
 struct VarDecl {
@@ -46,6 +46,7 @@ struct VarDecl {
 
 struct FnDecl {
    bool isPublic;
+   bool returnsRef;
    StringId module;
    StringId identifier;
    NodeList body;
@@ -53,6 +54,7 @@ struct FnDecl {
 };
 
 struct Lambda {
+   bool returnsRef;
    NodeList body;
    NodeList parameters;
 };
@@ -88,8 +90,9 @@ struct MatchStmt {
 };
 
 struct ForLoop {
-   bool reversed = false;
+   bool reversed;
    StringId identifier;
+   StringId indexIdentifier;
    NodeId inExpression;
    NodeList body;
 };
@@ -195,6 +198,7 @@ struct Program {
 // Node logic
 
 struct Node {
+   bool ref = false;
    StmtType type;
    size_t line;
 
@@ -250,14 +254,14 @@ struct ASTArena {
 
    NodeId allocate(Node node);
    NodeId allocateVarDecl(bool isPublic, bool isConstant, const std::string &identifier, NodeId value, size_t line);
-   NodeId allocateFnDecl(bool isPublic, const std::string &module, const std::string &identifier, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
-   NodeId allocateLambda(const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
+   NodeId allocateFnDecl(bool isPublic, bool returnsRef, const std::string &module, const std::string &identifier, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
+   NodeId allocateLambda(bool returnsRef, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line);
    NodeId allocateEnumDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &entries, size_t line);
    NodeId allocateStructDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &decls, size_t line);
    NodeId allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elifClauses, NodeId elseClause, size_t line);
    NodeId allocateIfClause(TokenType keyword, NodeId expression, const std::vector<NodeId> &statement, size_t line);
    NodeId allocateMatchStmt(NodeId expression, const std::vector<NodeId> &cases, NodeId elseClause, size_t line);
-   NodeId allocateForLoop(bool reversed, const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line);
+   NodeId allocateForLoop(bool reversed, const std::string &identifier, const std::string &indexIdentifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line);
    NodeId allocateLoop(const std::vector<NodeId> &body, size_t line);
    NodeId allocateWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line);
    NodeId allocateDoWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line);

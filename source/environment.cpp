@@ -27,6 +27,7 @@ void Environment::declare(Interpreter &interpreter, bool isConstant, const std::
    }
    variables[identifier] = value;
    interpreter.valuePool[value].constant = isConstant;
+   interpreter.valuePool[value].lvalue = true;
 }
 
 bool Environment::exists(const std::string &identifier) {

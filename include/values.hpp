@@ -44,9 +44,11 @@ struct Value {
 
    // members
    
+   bool constant = false;
+   bool lvalue = false;
+   bool ref = false;
    ValueType type;
    size_t line;
-   bool constant = false;
 
    union {
       long double number;

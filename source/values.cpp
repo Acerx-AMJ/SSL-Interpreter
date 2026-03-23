@@ -1,6 +1,7 @@
 #include "error.hpp"
 #include "interpreter.hpp"
 #include "values.hpp"
+#include <algorithm>
 #include <cmath>
 
 std::string Value::asPrintable(Interpreter &interpreter) {
@@ -14,13 +15,15 @@ std::string Value::asPrintable(Interpreter &interpreter) {
    case ValueType::function:
    case ValueType::ntFunction:
       return "[function]";
-   case ValueType::array:
+   case ValueType::array: {
       std::string result = "[ ";
       for (ValueId id: interpreter.arrayPool[array]) {
          Value &value = interpreter.valuePool[id];
          result += value.asPrintable(interpreter) + ", ";
       }
       return result + "]";
+   } default:
+      raiseError(line, "For some reason this value is not printable.");
    }
 }
 
@@ -159,7 +162,13 @@ bool Value::greater(Interpreter &interpreter, const Value &r) const {
    if (type == ValueType::string && r.type == ValueType::string) {
       const std::string &first  = interpreter.arena.strings[string];
       const std::string &second = interpreter.arena.strings[r.string];
-      return first > second;
+      std::string a = first;
+      std::string b = second;
+
+      std::transform(a.begin(), a.end(), a.begin(), ::tolower);
+      std::transform(b.begin(), b.end(), b.begin(), ::tolower);
+
+      return a > b;
    }
 
    raiseError(line, "Cannot compare %s value and %s value.",

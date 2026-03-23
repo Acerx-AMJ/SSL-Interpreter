@@ -38,16 +38,19 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
    Node &stmt = arena.get(l.function.function);
    Environment *parent;
    NodeList *body, *params;
+   bool returnsRef;
 
    if (stmt.type == StmtType::lambda) {
       parent = &environment;
       body = &stmt.lambda.body;
       params = &stmt.lambda.parameters;
+      returnsRef = stmt.lambda.returnsRef;
    }
    else if (stmt.type == StmtType::fnDecl) {
       parent = l.function.env;
       body = &stmt.fnDecl.body;
       params = &stmt.fnDecl.parameters;
+      returnsRef = stmt.fnDecl.returnsRef;
    }
 
    if (params->size != args.size()) {
@@ -58,7 +61,8 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
    Environment newEnvironment (parent);
    for (size_t i = 0; i < args.size(); ++i) {
       Node &param = arena.get(arena.children[i + params->start]);
-      ValueId arg = args[i];
+      ValueId arg = param.ref ? args[i] : copy(args[i]);
+      valuePool[arg].lvalue = param.ref;
 
       newEnvironment.declare(*this, valuePool[arg].constant, arena.strings[param.identifier.id], arg, line);
    }
@@ -67,7 +71,9 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
    returning = false;
    ValueId result = evaluate(*body, newEnvironment);
    returning = previousReturning;
-   return result;
+
+   valuePool[result].lvalue = returnsRef;
+   return returnsRef ? result : copy(result);
 }
 
 void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
@@ -137,15 +143,16 @@ ValueId Interpreter::evaluateStmt(Environment &environment, NodeId node) {
 ValueId Interpreter::evaluateVarDecl(Environment &environment, NodeId node) {
    Node &n = arena.get(node);
    ValueId value = evaluateExpr(environment, n.varDecl.value);
-
    bool isConstant = n.varDecl.isConstant;
-   bool isValueConstant = valuePool[value].constant;
+   bool isValueConstant = valuePool[value].constant && valuePool[value].ref;
 
    if (!isConstant && isValueConstant) {
-      raiseError(n.line, "Attempted to declare a constant value as a mutable variable.");
+      raiseError(n.line, "Attempted to declare a constant value as a mutable reference. Change := to "
+                         ":: to make it constant.");
    }
-   
-   environment.declare(*this, isConstant, arena.strings[n.varDecl.identifier], value, n.line);
+
+   ValueId arg = valuePool[value].ref ? value : copy(value);
+   environment.declare(*this, isConstant, arena.strings[n.varDecl.identifier], arg, n.line);
    return null;
 }
 
@@ -258,6 +265,10 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
    std::string &identifier = arena.strings[n.forLoop.identifier];
 
    if (inExpr.type == StmtType::range) {
+      if (!arena.strings[n.forLoop.indexIdentifier].empty()) {
+         raiseError(n.line, "Expected only one identifier in for range loop.");
+      }
+
       ValueId left = evaluateExpr(environment, inExpr.range.left);
       ValueId right = evaluateExpr(environment, inExpr.range.right);
 
@@ -288,6 +299,7 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
    }
 
    // handle iterating strings and arrays
+   std::string indexIdentifier = arena.strings[n.forLoop.indexIdentifier];
    ValueId expression = evaluateExpr(environment, n.forLoop.inExpression);
    Value &expr = valuePool[expression];
 
@@ -298,6 +310,10 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
       for (long i = reversed ? array.size() - 1 : 0; reversed ? (i >= 0) : (i < array.size()); reversed ? --i : ++i) {
          Environment newEnvironment (&environment);
          newEnvironment.declare(*this, valuePool[array[i]].constant, identifier, array[i], n.line);
+
+         if (!indexIdentifier.empty()) {
+            newEnvironment.declare(*this, true, indexIdentifier, allocateNumber(i, n.line), n.line);
+         }
          evaluate(n.forLoop.body, newEnvironment);
       }
       return null;
@@ -440,7 +456,14 @@ ValueId Interpreter::evaluateUnaryExpr(Environment &environment, NodeId node) {
    case TokenType::plus:      return value;
    case TokenType::minus:     return v.negate(*this);
    case TokenType::knot:      return allocateBoolean(!v.asBoolean(*this), v.line);
-   default: raiseError(n.line, "Unsupported unary operator '%s'.", getTokenTypeAsString(n.unary.op));
+   case TokenType::ref: {
+      if (!v.lvalue) {
+         raiseError(n.line, "Expected lvalue to the right of the & operator.");
+      }
+      v.ref = true;
+      return value;
+   } default:
+      raiseError(n.line, "Unsupported unary operator '%s'.", getTokenTypeAsString(n.unary.op));
    }
 }
 
@@ -483,16 +506,12 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
 
    Node &leftnode = arena.get(n.assignment.left);
 
-   // function calls aren't necessarily lvalues but they might be and I'm not in the mood to write the
-   // whole logic for checking that 
-   if (leftnode.type != StmtType::identifier     && leftnode.type != StmtType::property
-    && leftnode.type != StmtType::arraySubscript && leftnode.type != StmtType::call) {
-      raiseError(n.line, "Expected lvalue on the left of the assignment operator, got %s instead.",
-         getStatementTypeAsString(leftnode.type));
-   }
-
    ValueId left = evaluateExpr(environment, n.assignment.left);
    Value &l = valuePool[left];
+
+   if (!l.lvalue) {
+      raiseError(n.line, "Expected lvalue on the left of the assignment operator.");
+   }
 
    if (l.constant) {
       raiseError(n.line, "Cannot assign to a constant.");
@@ -511,6 +530,8 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
    }
 
    l.constant = r.constant;
+   l.lvalue = true; // let's hope this doesn't turn into something the users will abuse
+   
    if (n.assignment.op != TokenType::equals) {
       valuePool.pop_back();
    }
@@ -552,7 +573,9 @@ ValueId Interpreter::evaluatePrimaryExpr(Environment &environment, NodeId node) 
       array.reserve(l.size);
 
       for (size_t i = l.start; i < l.start + l.size; ++i) {
-         array.push_back(evaluateExpr(environment, arena.children[i]));
+         ValueId value = evaluateExpr(environment, arena.children[i]);
+         valuePool[value].lvalue = true;
+         array.push_back(value);
       }
       return allocateArray(array, n.line);
    } default:
@@ -570,38 +593,69 @@ ValueId Interpreter::allocate(Value value) {
 }
 
 ValueId Interpreter::allocateNumber(long double number, size_t line) {
-   Value value {ValueType::number, line};
+   Value value;
+   value.type = ValueType::number;
+   value.line = line;
    value.number = number;
    return allocate(value);
 }
 
 ValueId Interpreter::allocateBoolean(bool boolean, size_t line) {
-   Value value {ValueType::boolean, line};
+   Value value;
+   value.type = ValueType::boolean;
+   value.line = line;
    value.boolean = boolean;
    return allocate(value);
 }
 
 ValueId Interpreter::allocateString(StringId string, size_t line) {
-   Value value {ValueType::string, line};
+   Value value;
+   value.type = ValueType::string;
+   value.line = line;
    value.string = string;
    return allocate(value);
 }
 
 ValueId Interpreter::allocateString(const std::string &string, size_t line) {
-   Value value {ValueType::string, line};
+   Value value;
+   value.type = ValueType::string;
+   value.line = line;
    value.string = arena.pushString(string);
    return allocate(value);
 }
 
 ValueId Interpreter::allocateFunction(NodeId function, Environment *environment, size_t line) {
-   Value value {ValueType::function, line};
+   Value value;
+   value.type = ValueType::function;
+   value.line = line;
    value.function = {function, environment};
    return allocate(value);
 }
 
 ValueId Interpreter::allocateArray(const std::vector<ValueId> &array, size_t line) {
-   Value value {ValueType::array, line};
+   Value value;
+   value.type = ValueType::array;
+   value.line = line;
    value.array = arrayPool.size();
    arrayPool.push_back(array);
+   return allocate(value);
+}
+
+ValueId Interpreter::copy(ValueId id, bool arrayList) {
+   Value value = valuePool[id];
+   value.lvalue = arrayList;
+   value.constant = false;
+
+   if (value.type != ValueType::array) return allocate(value);
+
+   std::vector<ValueId> &array = arrayPool[value.array];
+   std::vector<ValueId> newArray;
+   newArray.reserve(array.size());
+
+   for (ValueId id: array) {
+      newArray.push_back(copy(id, true));
+   }
+   value.array = arrayPool.size();
+   arrayPool.push_back(newArray);
    return allocate(value);
 }

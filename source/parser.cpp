@@ -130,13 +130,29 @@ NodeId Parser::parseFnDecl(bool isPublic) {
          break;
       }
 
+      bool isRef = false;
+      if (is(TokenType::ref)) {
+         advance();
+         isRef = true;
+      }
+
       expect(StmtType::fnDecl, TokenType::identifier);
       NodeId identifier = parsePrimaryExpr();
+
+      arena.get(identifier).ref = isRef;
       parameters.push_back(identifier);
    } while (is(TokenType::comma));
 
    expect(StmtType::fnDecl, TokenType::rparen);
    advance();
+
+   bool returnsRef = false;
+   if (is(TokenType::arrow)) {
+      advance();
+      expect(StmtType::fnDecl, TokenType::ref);
+      advance();
+      returnsRef = true;
+   }
 
    std::vector<NodeId> nodes;
    while (!is(TokenType::kend)) {
@@ -149,7 +165,7 @@ NodeId Parser::parseFnDecl(bool isPublic) {
    }
 
    advance();
-   return arena.allocateFnDecl(isPublic, module, identifier, nodes, parameters, originalLine);
+   return arena.allocateFnDecl(isPublic, returnsRef, module, identifier, nodes, parameters, originalLine);
 }
 
 NodeId Parser::parseEnumDecl(bool isPublic) {
@@ -319,6 +335,14 @@ NodeId Parser::parseForLoop() {
    std::string identifier = current().lexeme;
    advance();
 
+   std::string indexIdentifier;
+   if (is(TokenType::comma)) {
+      advance();
+      expect(StmtType::forLoop, TokenType::identifier);
+      indexIdentifier = current().lexeme;
+      advance();
+   }
+
    expect(StmtType::forLoop, TokenType::kin);
    advance();
 
@@ -341,7 +365,7 @@ NodeId Parser::parseForLoop() {
    }
 
    advance();
-   return arena.allocateForLoop(reversed, identifier, expression, nodes, originalLine);
+   return arena.allocateForLoop(reversed, identifier, indexIdentifier, expression, nodes, originalLine);
 }
 
 NodeId Parser::parseLoop() {
@@ -632,7 +656,7 @@ NodeId Parser::parseExponentiativeExpr() {
 }
 
 NodeId Parser::parseUnaryExpr() {
-   if (is(TokenType::plus) || is(TokenType::minus) || is(TokenType::knot)) {
+   if (is(TokenType::plus) || is(TokenType::minus) || is(TokenType::knot) || is(TokenType::ref)) {
       size_t originalLine = line();
       TokenType op = current().type;
 
@@ -779,16 +803,31 @@ NodeId Parser::parsePrimaryExpr() {
             break;
          }
 
-         expect(StmtType::lambda, TokenType::identifier);
+         bool isRef = false;
+         if (is(TokenType::ref)) {
+            advance();
+            isRef = true;
+         }
 
+         expect(StmtType::lambda, TokenType::identifier);
          NodeId identifier = parsePrimaryExpr();
+
+         arena.get(identifier).ref = isRef;
          parameters.push_back(identifier);
       } while (is(TokenType::comma));
 
       std::vector<NodeId> nodes;
       expect(StmtType::lambda, TokenType::rparen);
       advance();
-      
+
+      bool returnsRef = false;
+      if (is(TokenType::arrow)) {
+         advance();
+         expect(StmtType::lambda, TokenType::ref);
+         advance();
+         returnsRef = true;
+      }
+
       while (!is(TokenType::kend)) {
          if (is(TokenType::eof)) {
             raiseError(originalLine, "Unterminated lambda declaration.");
@@ -799,7 +838,7 @@ NodeId Parser::parsePrimaryExpr() {
       }
 
       advance();
-      return arena.allocateLambda(nodes, parameters, originalLine);
+      return arena.allocateLambda(returnsRef, nodes, parameters, originalLine);
    }
    else {
       raiseError(line(), "Expected primary expression, got '%s' instead.",

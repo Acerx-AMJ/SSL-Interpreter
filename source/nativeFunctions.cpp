@@ -117,6 +117,7 @@ ValueId ntfTypeOf(const std::vector<ValueId> &args, Interpreter &interpreter, si
    case ValueType::array:
       return interpreter.allocateString("array", line);
    }
+   return null;
 }
 
 ValueId ntfIsNull(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {

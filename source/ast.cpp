@@ -5,7 +5,7 @@ ASTArena::ASTArena() {
    children.reserve(256);
    strings.reserve(128);
 
-   Node null {StmtType::null, 0};
+   Node null {false, StmtType::null, 0};
    null.null = {};
    nodes.push_back(null);
 }
@@ -205,175 +205,233 @@ NodeId ASTArena::allocate(Node node) {
 }
 
 NodeId ASTArena::allocateVarDecl(bool isPublic, bool isConstant, const std::string &identifier, NodeId value, size_t line) {
-   Node node {StmtType::varDecl, line};
+   Node node;
+   node.type = StmtType::varDecl;
+   node.line = line;
    node.varDecl = {isPublic, isConstant, pushString(identifier), value};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateFnDecl(bool isPublic, const std::string &module, const std::string &identifier, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line) {
-   Node node {StmtType::fnDecl, line};
-   node.fnDecl = {isPublic, pushString(module), pushString(identifier), pushVector(body), pushVector(params)};
+NodeId ASTArena::allocateFnDecl(bool isPublic, bool returnsRef, const std::string &module, const std::string &identifier, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line) {
+   Node node;
+   node.type = StmtType::fnDecl;
+   node.line = line;
+   node.fnDecl = {isPublic, returnsRef, pushString(module), pushString(identifier), pushVector(body), pushVector(params)};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateLambda(const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line) {
-   Node node {StmtType::lambda, line};
-   node.lambda = {pushVector(body), pushVector(params)};
+NodeId ASTArena::allocateLambda(bool returnsRef, const std::vector<NodeId> &body, const std::vector<NodeId> &params, size_t line) {
+   Node node;
+   node.type = StmtType::lambda;
+   node.line = line;
+   node.lambda = {returnsRef, pushVector(body), pushVector(params)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateEnumDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &entries, size_t line) {
-   Node node {StmtType::enumDecl, line};
+   Node node;
+   node.type = StmtType::enumDecl;
+   node.line = line;
    node.enumDecl = {isPublic, pushString(identifier), pushVector(entries)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateStructDecl(bool isPublic, const std::string &identifier, const std::vector<NodeId> &decls, size_t line) {
-   Node node {StmtType::structDecl, line};
+   Node node;
+   node.type = StmtType::structDecl;
+   node.line = line;
    node.structDecl = {isPublic, pushString(identifier), pushVector(decls)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateIfStmt(NodeId ifClause, const std::vector<NodeId> &elifClauses, NodeId elseClause, size_t line) {
-   Node node {StmtType::ifStmt, line};
+   Node node;
+   node.type = StmtType::ifStmt;
+   node.line = line;
    node.ifStmt = {ifClause, pushVector(elifClauses), elseClause};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateIfClause(TokenType keyword, NodeId expression, const std::vector<NodeId> &statement, size_t line) {
-   Node node {StmtType::ifClause, line};
+   Node node;
+   node.type = StmtType::ifClause;
+   node.line = line;
    node.ifClause = {keyword, expression, pushVector(statement)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateMatchStmt(NodeId expression, const std::vector<NodeId> &cases, NodeId elseClause, size_t line) {
-   Node node {StmtType::matchStmt, line};
+   Node node;
+   node.type = StmtType::matchStmt;
+   node.line = line;
    node.matchStmt = {expression, pushVector(cases), elseClause};
    return allocate(node);
 }
 
-NodeId ASTArena::allocateForLoop(bool reversed, const std::string &identifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line) {
-   Node node {StmtType::forLoop, line};
-   node.forLoop = {reversed, pushString(identifier), inExpression, pushVector(body)};
+NodeId ASTArena::allocateForLoop(bool reversed, const std::string &identifier, const std::string &indexIdentifier, NodeId inExpression, const std::vector<NodeId> &body, size_t line) {
+   Node node;
+   node.type = StmtType::forLoop;
+   node.line = line;
+   node.forLoop = {reversed, pushString(identifier), pushString(indexIdentifier), inExpression, pushVector(body)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateLoop(const std::vector<NodeId> &body, size_t line) {
-   Node node {StmtType::loop, line};
+   Node node;
+   node.type = StmtType::loop;
+   node.line = line;
    node.loop = {pushVector(body)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line) {
-   Node node {StmtType::whileLoop, line};
+   Node node;
+   node.type = StmtType::whileLoop;
+   node.line = line;
    node.whileLoop = {expression, pushVector(statement)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateDoWhileLoop(NodeId expression, const std::vector<NodeId> &statement, size_t line) {
-   Node node {StmtType::doWhileLoop, line};
+   Node node;
+   node.type = StmtType::doWhileLoop;
+   node.line = line;
    node.doWhileLoop = {expression, pushVector(statement)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateBreakStmt(size_t line) {
-   Node node {StmtType::breakStmt, line};
+   Node node;
+   node.type = StmtType::breakStmt;
+   node.line = line;
    node.breakStmt = {};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateContinueStmt(size_t line) {
-   Node node {StmtType::continueStmt, line};
+   Node node;
+   node.type = StmtType::continueStmt;
+   node.line = line;
    node.continueStmt = {};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateReturnStmt(NodeId value, size_t line) {
-   Node node {StmtType::returnStmt, line};
+   Node node;
+   node.type = StmtType::returnStmt;
+   node.line = line;
    node.returnStmt = {value};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateUnlessStmt(NodeId statement, NodeId expression, size_t line) {
-   Node node {StmtType::unlessStmt, line};
+   Node node;
+   node.type = StmtType::unlessStmt;
+   node.line = line;
    node.unlessStmt = {statement, expression};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateImportStmt(const std::vector<NodeId> &values, const std::string &file, const std::string &as, size_t line) {
-   Node node {StmtType::importStmt, line};
+   Node node;
+   node.type = StmtType::importStmt;
+   node.line = line;
    node.importStmt = {pushVector(values), pushString(file), pushString(as)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateAssignment(NodeId left, NodeId right, TokenType op, size_t line) {
-   Node node {StmtType::assignment, line};
+   Node node;
+   node.type = StmtType::assignment;
+   node.line = line;
    node.assignment = {left, right, op};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateBinary(NodeId left, NodeId right, TokenType op, size_t line) {
-   Node node {StmtType::binary, line};
+   Node node;
+   node.type = StmtType::binary;
+   node.line = line;
    node.binary = {left, right, op};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateUnary(NodeId value, TokenType op, size_t line) {
-   Node node {StmtType::unary, line};
+   Node node;
+   node.type = StmtType::unary;
+   node.line = line;
    node.unary = {value, op};
    return allocate(node);
 }
 
 NodeId ASTArena::allocatePropertyAccess(bool nullChecked, NodeId left, const std::string &right, size_t line) {
-   Node node {StmtType::property, line};
+   Node node;
+   node.type = StmtType::property;
+   node.line = line;
    node.property = {nullChecked, left, pushString(right)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateArraySubscript(NodeId left, NodeId expression, size_t line) {
-   Node node {StmtType::arraySubscript, line};
+   Node node;
+   node.type = StmtType::arraySubscript;
+   node.line = line;
    node.arraySubscript = {left, expression};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateFnCall(NodeId left, const std::vector<NodeId> &args, size_t line) {
-   Node node {StmtType::call, line};
+   Node node;
+   node.type = StmtType::call;
+   node.line = line;
    node.fnCall = {left, pushVector(args)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateRange(bool inclusive, NodeId left, NodeId right, size_t line) {
-   Node node {StmtType::range, line};
+   Node node;
+   node.type = StmtType::range;
+   node.line = line;
    node.range = {inclusive, left, right};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, size_t line) {
-   Node node {StmtType::enumEntry, line};
+   Node node;
+   node.type = StmtType::enumEntry;
+   node.line = line;
    node.enumEntry = {pushString(identifier), value, pushVector(args)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateIdentifier(const std::string &string, size_t line) {
-   Node node {StmtType::identifier, line};
+   Node node;
+   node.type = StmtType::identifier;
+   node.line = line;
    node.identifier = {pushString(string)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateNumber(long double number, size_t line) {
-   Node node {StmtType::number, line};
+   Node node;
+   node.type = StmtType::number;
+   node.line = line;
    node.number = {number};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateString(const std::string &string, size_t line) {
-   Node node {StmtType::string, line};
+   Node node;
+   node.type = StmtType::string;
+   node.line = line;
    node.string = {pushString(string)};
    return allocate(node);
 }
 
 NodeId ASTArena::allocateArray(const std::vector<NodeId> &values, size_t line) {
-   Node node {StmtType::array, line};
+   Node node;
+   node.type = StmtType::array;
+   node.line = line;
    node.array = {pushVector(values)};
    return allocate(node);
 }
@@ -383,7 +441,9 @@ NodeId ASTArena::allocateNull(size_t line) {
 }
 
 NodeId ASTArena::allocateProgram(const std::vector<NodeId> &nodes, size_t line) {
-   Node node {StmtType::program, line};
+   Node node;
+   node.type = StmtType::program;
+   node.line = line;
    node.program = {pushVector(nodes)};
    return allocate(node);
 }
