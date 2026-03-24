@@ -10,11 +10,7 @@ void setProgramCode(const std::string *code) {
    ::code = code;
 }
 
-void raiseError(size_t line, const char *error, ...) {
-   if (!code) {
-      exit(EXIT_FAILURE);
-   }
-   
+void printSurroundingLines(size_t line) {
    std::stringstream ss (*code);
    std::string previousText, currentText, nextText, temp;
    size_t previousLine = 0, nextLine = 0, index = 1;
@@ -45,13 +41,19 @@ void raiseError(size_t line, const char *error, ...) {
    // Can the line ever be empty? I don't know
    if (!currentText.empty()) {
       printf("%-5lu %s\n", line, currentText.c_str());
-      printf("%-5s ", std::string(std::to_string(line).size(), ' ').c_str());
 
       #ifdef unix
       printf("\e[91m");
       #endif
 
-      printf("%s", std::string(currentText.size(), '^').c_str());
+      size_t startingSpaces = 0;
+      size_t endingSpaces = currentText.size() - 1;
+
+      while (isspace(currentText[startingSpaces])) ++startingSpaces;
+      while (isspace(currentText[endingSpaces]))   --endingSpaces;
+
+      printf("%-5s %*s", std::string(std::to_string(line).size(), ' ').c_str(), (int)startingSpaces, "");
+      printf("%s", std::string(endingSpaces + 1 - startingSpaces, '^').c_str());
 
       #ifdef unix
       printf("\e[0m");
@@ -66,28 +68,29 @@ void raiseError(size_t line, const char *error, ...) {
       }
       printf("%-5lu %s\n", nextLine, nextText.c_str());
    }
+}
 
-   #ifdef unix
-   printf("\e[91m");
-   #endif
-
-   printf("Program exited due to the following error:\n");
-
-   #ifdef unix
-   printf("\e[0m");
-   #endif
+void raiseError(size_t line, const char *error, ...) {
+   if (!code) {
+      exit(EXIT_FAILURE);
+   }
+   
+   printSurroundingLines(line);
 
    va_list args;
    va_start(args, error);
-
-   vprintf(error, args);
-   putchar('\n');
-
+   raiseErrorVargs(error, args);
    va_end(args);
-   exit(EXIT_FAILURE);
 }
 
 void raiseErrorNoLine(const char *error, ...) {
+   va_list args;
+   va_start(args, error);
+   raiseErrorVargs(error, args);
+   va_end(args);
+}
+
+void raiseErrorVargs(const char *error, va_list args) {
    #ifdef unix
    printf("\e[91m");
    #endif
@@ -98,12 +101,7 @@ void raiseErrorNoLine(const char *error, ...) {
    printf("\e[0m");
    #endif
 
-   va_list args;
-   va_start(args, error);
-
    vprintf(error, args);
    putchar('\n');
-
-   va_end(args);
    exit(EXIT_FAILURE);
 }
