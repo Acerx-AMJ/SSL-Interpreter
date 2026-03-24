@@ -56,6 +56,7 @@ struct Interpreter {
    std::vector<std::vector<ValueId>> arrayPool;
 
    bool returning = false;
+   ValueId returnValue;
 };
 
 #endif

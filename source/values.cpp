@@ -8,10 +8,10 @@ std::string Value::asPrintable(Interpreter &interpreter) {
    switch (type) {
    case ValueType::null:
       return "null";
-   case ValueType::number:
-   case ValueType::boolean:
    case ValueType::character:
       return std::string(1, interpreter.arena.strings[character.stringId][character.index]);
+   case ValueType::number:
+   case ValueType::boolean:
    case ValueType::string:
       return asString(interpreter);
    case ValueType::function:

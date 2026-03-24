@@ -13,7 +13,7 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
    ValueId last;
    for (size_t index = program.start; index < program.start + program.size; ++index) {
       last = evaluateStmt(environment, arena.children[index]);
-      if (returning) return last;
+      if (returning) return returnValue;
    }
    return last;
 }
@@ -294,6 +294,7 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
          Environment newEnvironment (&environment);
          newEnvironment.declare(*this, true, identifier, allocateNumber(i, n.line), n.line);
          evaluate(n.forLoop.body, newEnvironment);
+         if (returning) return null;
       }
       return null;
    }
@@ -315,6 +316,7 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
             newEnvironment.declare(*this, true, indexIdentifier, allocateNumber(i, n.line), n.line);
          }
          evaluate(n.forLoop.body, newEnvironment);
+         if (returning) return null;
       }
       return null;
    }
@@ -330,6 +332,7 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
             newEnvironment.declare(*this, true, indexIdentifier, allocateNumber(i, n.line), n.line);
          }
          evaluate(n.forLoop.body, newEnvironment);
+         if (returning) return null;
       }
       return null;
    }
@@ -343,6 +346,7 @@ ValueId Interpreter::evaluateLoop(Environment &environment, NodeId node) {
    while (true) {
       Environment newEnvironment (&environment);
       evaluate(n.loop.body, newEnvironment);
+      if (returning) return null;
    }
    return null;
 }
@@ -356,6 +360,7 @@ ValueId Interpreter::evaluateWhileLoop(Environment &environment, NodeId node) {
 
       Environment newEnvironment (&environment);
       evaluate(n.whileLoop.statement, newEnvironment);
+      if (returning) return null;
    }
    return null;
 }
@@ -368,7 +373,7 @@ ValueId Interpreter::evaluateDoWhileLoop(Environment &environment, NodeId node) 
 
       ValueId expression = evaluateExpr(environment, n.whileLoop.expression);
       Value &expr = valuePool[expression];
-      if (!expr.asBoolean(*this)) return null;
+      if (returning || !expr.asBoolean(*this)) return null;
    }
    return null;
 }
@@ -384,7 +389,8 @@ ValueId Interpreter::evaluateContinue(Environment &environment, NodeId node) {
 ValueId Interpreter::evaluateReturnStmt(Environment &environment, NodeId node) {
    Node &returnStmt = arena.get(node);
    returning = true;
-   return evaluateExpr(environment, returnStmt.returnStmt.value);
+   returnValue = evaluateExpr(environment, returnStmt.returnStmt.value);
+   return null;
 }
 
 ValueId Interpreter::evaluateUnlessStmt(Environment &environment, NodeId node) {
