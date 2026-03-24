@@ -25,7 +25,7 @@ std::string Value::asPrintable(Interpreter &interpreter) {
       }
       return result + "]";
    } default:
-      raiseError(line, "For some reason this value is not printable.");
+      raiseError(line, "%s value is not printable.", getValueTypeAsString(type));
    }
 }
 
@@ -36,8 +36,9 @@ ValueId Value::negate(Interpreter &interpreter) const {
 }
 
 ValueId Value::add(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function || r.type == ValueType::function
-    || type == ValueType::boolean  || r.type == ValueType::boolean) {
+   if (type == ValueType::function   || r.type == ValueType::function
+    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
+    || type == ValueType::boolean    || r.type == ValueType::boolean) {
       raiseError(line, "Cannot perform addition on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -52,9 +53,10 @@ ValueId Value::add(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function || r.type == ValueType::function
-    || type == ValueType::boolean  || r.type == ValueType::boolean
-    || type == ValueType::string   || r.type == ValueType::string) {
+   if (type == ValueType::function   || r.type == ValueType::function
+    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
+    || type == ValueType::boolean    || r.type == ValueType::boolean
+    || type == ValueType::string     || r.type == ValueType::string) {
       raiseError(line, "Cannot perform subtraction on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -64,9 +66,10 @@ ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function || r.type == ValueType::function
-    || type == ValueType::boolean  || r.type == ValueType::boolean
-    || type == ValueType::string   || r.type == ValueType::string) {
+   if (type == ValueType::function   || r.type == ValueType::function
+    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
+    || type == ValueType::boolean    || r.type == ValueType::boolean
+    || type == ValueType::string     || r.type == ValueType::string) {
       raiseError(line, "Cannot perform multiplication on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -76,9 +79,10 @@ ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function || r.type == ValueType::function
-    || type == ValueType::boolean  || r.type == ValueType::boolean
-    || type == ValueType::string   || r.type == ValueType::string) {
+   if (type == ValueType::function   || r.type == ValueType::function
+    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
+    || type == ValueType::boolean    || r.type == ValueType::boolean
+    || type == ValueType::string     || r.type == ValueType::string) {
       raiseError(line, "Cannot perform division on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -89,9 +93,10 @@ ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function || r.type == ValueType::function
-    || type == ValueType::boolean  || r.type == ValueType::boolean
-    || type == ValueType::string   || r.type == ValueType::string) {
+   if (type == ValueType::function   || r.type == ValueType::function
+    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
+    || type == ValueType::boolean    || r.type == ValueType::boolean
+    || type == ValueType::string     || r.type == ValueType::string) {
       raiseError(line, "Cannot perform modulo on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -102,9 +107,10 @@ ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function || r.type == ValueType::function
-    || type == ValueType::boolean  || r.type == ValueType::boolean
-    || type == ValueType::string   || r.type == ValueType::string) {
+   if (type == ValueType::function   || r.type == ValueType::function
+    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
+    || type == ValueType::boolean    || r.type == ValueType::boolean
+    || type == ValueType::string     || r.type == ValueType::string) {
       raiseError(line, "Cannot perform exponentiation on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -114,11 +120,16 @@ ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
 }
 
 bool Value::equal(Interpreter &interpreter, const Value &r) const {
-   if (type != r.type)               return false;
-   if (type == ValueType::null)      return true;
-   if (type == ValueType::number)    return number == r.number;
-   if (type == ValueType::boolean)   return boolean == r.boolean;
-   if (type == ValueType::function)  return function.function == r.function.function;
+   if (type == ValueType::function   || r.type == ValueType::function
+    || type == ValueType::ntFunction || r.type == ValueType::ntFunction) {
+      raiseError(line, "Cannot compare %s value to %s value.",
+         getValueTypeAsString(type), getValueTypeAsString(r.type));
+   }
+
+   if (type != r.type)                return false;
+   if (type == ValueType::null)       return true;
+   if (type == ValueType::number)     return number == r.number;
+   if (type == ValueType::boolean)    return boolean == r.boolean;
 
    if (type == ValueType::character) {
       return interpreter.arena.strings[character.stringId][character.index]
@@ -183,7 +194,7 @@ bool Value::greater(Interpreter &interpreter, const Value &r) const {
       return a > b;
    }
 
-   raiseError(line, "Cannot compare %s value and %s value.",
+   raiseError(line, "Cannot compare %s value to %s value.",
       getValueTypeAsString(type), getValueTypeAsString(r.type));
 }
 

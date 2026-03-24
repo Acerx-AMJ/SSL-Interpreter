@@ -2,6 +2,7 @@
 #define SSL_VALUES_HPP
 
 #include "ast.hpp"
+#include "nativeFunctions.hpp"
 
 enum class ValueType: char {
    null, number, boolean, character, string, function, ntFunction, array
@@ -62,10 +63,9 @@ struct Value {
       CharacterValue character;
       StringId string;
       FunctionValue function;
-      StringId nativeFn;
+      NtFunc nativeFn;
       ArrayId array;
    };
 };
-
 
 #endif

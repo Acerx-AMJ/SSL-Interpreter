@@ -39,13 +39,14 @@ struct Interpreter {
 
    // allocate
 
-   ValueId allocate(Value value);
+   ValueId allocate(const Value &value);
    ValueId allocateNumber(long double number, size_t line);
    ValueId allocateBoolean(bool boolean, size_t line);
    ValueId allocateCharacter(StringId string, size_t index, size_t line);
    ValueId allocateString(StringId string, size_t line);
    ValueId allocateString(const std::string &string, size_t line);
    ValueId allocateFunction(NodeId function, Environment *environment, size_t line);
+   ValueId allocateNtFunction(NtFunc function);
    ValueId allocateArray(const std::vector<ValueId> &array, size_t line);
    ValueId copy(ValueId id, bool arrayList = false);
 

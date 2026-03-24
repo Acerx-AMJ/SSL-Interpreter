@@ -1,12 +1,19 @@
 #ifndef SSL_NATIVE_FUNCTIONS_HPP
 #define SSL_NATIVE_FUNCTIONS_HPP
 
-#include "values.hpp"
-#include <functional>
+#include <cstdint>
+#include <vector>
 
-using NtFunc = std::function<ValueId(const std::vector<ValueId>&, struct Interpreter&, size_t)>;
+using ValueId = uint32_t;
+using NtFunc = ValueId(*)(const std::vector<ValueId>&, struct Interpreter&, size_t);
 
-bool isNativeFunction(const std::string &identifier);
-const NtFunc &getNativeFunction(const std::string &identifier, size_t line);
+#define NTFUNC(identifier) ValueId ntf##identifier(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line)
+
+// print utility
+NTFUNC(print);
+NTFUNC(println);
+NTFUNC(printf);
+NTFUNC(printfln);
+NTFUNC(format);
 
 #endif

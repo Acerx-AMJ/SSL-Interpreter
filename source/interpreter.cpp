@@ -19,17 +19,12 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
 }
 
 ValueId Interpreter::callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line) {
-   if (arena.get(function).type == StmtType::identifier) {
-      std::string &identifier = arena.strings[arena.get(function).identifier.id];
-
-      if (isNativeFunction(identifier)) {
-         NtFunc func = getNativeFunction(identifier, line);
-         return func(args, *this, line);
-      }
-   }
-
    ValueId left = evaluateExpr(environment, function);
    Value &l = valuePool[left];
+
+   if (l.type == ValueType::ntFunction) {
+      return l.nativeFn(args, *this, line);
+   }
 
    if (l.type != ValueType::function) {
       raiseError(line, "Cannot call %s value.", getValueTypeAsString(l.type));
@@ -580,7 +575,7 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
       }
    }
 
-   l.constant = r.constant;
+   l.constant = r.constant && r.type != ValueType::ntFunction;
    l.lvalue = true; // let's hope this doesn't turn into something the users will abuse
    
    if (n.assignment.op != TokenType::equals) {
@@ -637,7 +632,7 @@ ValueId Interpreter::evaluatePrimaryExpr(Environment &environment, NodeId node) 
 
 // allocate
 
-ValueId Interpreter::allocate(Value value) {
+ValueId Interpreter::allocate(const Value &value) {
    size_t id = valuePool.size();
    valuePool.push_back(value);
    return id;
@@ -688,6 +683,14 @@ ValueId Interpreter::allocateFunction(NodeId function, Environment *environment,
    value.type = ValueType::function;
    value.line = line;
    value.function = {function, environment};
+   return allocate(value);
+}
+
+ValueId Interpreter::allocateNtFunction(NtFunc function) {
+   Value value;
+   value.type = ValueType::ntFunction;
+   value.line = 0;
+   value.nativeFn = function;
    return allocate(value);
 }
 

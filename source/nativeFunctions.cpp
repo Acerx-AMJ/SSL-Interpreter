@@ -5,7 +5,7 @@
 
 // print utility
 
-ValueId ntfPrint(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
+NTFUNC(print) {
    for (ValueId id: args) {
       Value &value = interpreter.valuePool[id];
       fmt::print("{} ", value.asPrintable(interpreter));
@@ -13,8 +13,8 @@ ValueId ntfPrint(const std::vector<ValueId> &args, Interpreter &interpreter, siz
    return null;
 }
 
-ValueId ntfPrintln(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   ntfPrint(args, interpreter, line);
+NTFUNC(println) {
+   ntfprint(args, interpreter, line);
    putchar('\n');
    return null;
 }
@@ -33,7 +33,7 @@ std::string formatValues(const std::string &fmtStr, const std::vector<ValueId> &
    return fmt::vformat(fmtStr, store);
 }
 
-ValueId ntfPrintf(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
+NTFUNC(printf) {
    if (args.size() < 1) {
       raiseError(line, "printf: expected at least 1 argument.");
    }
@@ -54,7 +54,7 @@ ValueId ntfPrintf(const std::vector<ValueId> &args, Interpreter &interpreter, si
    }
 }
 
-ValueId ntfPrintfln(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
+NTFUNC(printfln) {
    if (args.size() < 1) {
       raiseError(line, "printfln: expected at least 1 argument.");
    }
@@ -75,7 +75,7 @@ ValueId ntfPrintfln(const std::vector<ValueId> &args, Interpreter &interpreter, 
    }
 }
 
-ValueId ntfFormat(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
+NTFUNC(format) {
    if (args.size() < 1) {
       raiseError(line, "format: expected at least 1 argument.");
    }
@@ -93,114 +93,4 @@ ValueId ntfFormat(const std::vector<ValueId> &args, Interpreter &interpreter, si
    catch (...) {
       raiseError(line, "format: brace count does not match argument count/the formatting is invalid.");
    }
-}
-
-// type utility
-
-ValueId ntfTypeOf(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "typeOf: expected exactly 1 argument.");
-   }
-   
-   switch (interpreter.valuePool[args[0]].type) {
-   case ValueType::null:
-      return null;
-   case ValueType::number:
-      return interpreter.allocateString("number", line);
-   case ValueType::boolean:
-      return interpreter.allocateString("boolean", line);
-   case ValueType::string:
-      return interpreter.allocateString("string", line);
-   case ValueType::function:
-   case ValueType::ntFunction:
-      return interpreter.allocateString("function", line);
-   case ValueType::array:
-      return interpreter.allocateString("array", line);
-   }
-   return null;
-}
-
-ValueId ntfIsNull(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "isNull: expected exactly 1 argument.");
-   }
-   return interpreter.allocateBoolean(interpreter.valuePool[args[0]].type == ValueType::null, line);
-}
-
-ValueId ntfIsNumber(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "isNumber: expected exactly 1 argument.");
-   }
-   return interpreter.allocateBoolean(interpreter.valuePool[args[0]].type == ValueType::number, line);
-}
-
-ValueId ntfIsBoolean(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "isBoolean: expected exactly 1 argument.");
-   }
-   return interpreter.allocateBoolean(interpreter.valuePool[args[0]].type == ValueType::boolean, line);
-}
-
-ValueId ntfIsString(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "isString: expected exactly 1 argument.");
-   }
-   return interpreter.allocateBoolean(interpreter.valuePool[args[0]].type == ValueType::string, line);
-}
-
-ValueId ntfIsFunction(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "isFunction: expected exactly 1 argument.");
-   }
-   ValueType type = interpreter.valuePool[args[0]].type;
-   return interpreter.allocateBoolean(type == ValueType::function || type == ValueType::ntFunction, line);
-}
-
-ValueId ntfIsArray(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "isArray: expected exactly 1 argument.");
-   }
-   return interpreter.allocateBoolean(interpreter.valuePool[args[0]].type == ValueType::array, line);
-}
-
-ValueId ntfToNumber(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "toNumber: expected exactly 1 argument.");
-   }
-   return interpreter.allocateNumber(interpreter.valuePool[args[0]].asNumber(interpreter), line);
-}
-
-ValueId ntfToBoolean(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "toBoolean: expected exactly 1 argument.");
-   }
-   return interpreter.allocateBoolean(interpreter.valuePool[args[0]].asBoolean(interpreter), line);
-}
-
-ValueId ntfToString(const std::vector<ValueId> &args, Interpreter &interpreter, size_t line) {
-   if (args.size() != 1) {
-      raiseError(line, "toString: expected exactly 1 argument.");
-   }
-   return interpreter.allocateString(interpreter.valuePool[args[0]].asString(interpreter), line);
-}
-
-// native map
-
-static const inline std::unordered_map<std::string_view, NtFunc> nativeFunctions {
-   {"print", ntfPrint}, {"println", ntfPrintln}, {"printf", ntfPrintf}, {"printfln", ntfPrintfln},
-   {"format", ntfFormat}, {"typeof", ntfTypeOf}, {"isNull", ntfIsNull}, {"isNumber", ntfIsNumber},
-   {"isBoolean", ntfIsBoolean}, {"isString", ntfIsString}, {"isFunction", ntfIsFunction},
-   {"isArray", ntfIsArray}, {"toNumber", ntfToNumber}, {"toBoolean", ntfToBoolean},
-   {"toString", ntfToString}
-};
-
-bool isNativeFunction(const std::string &identifier) {
-   return nativeFunctions.find(identifier) != nativeFunctions.end();
-}
-
-const NtFunc &getNativeFunction(const std::string &identifier, size_t line) {
-   if (nativeFunctions.find(identifier) == nativeFunctions.end()) {
-      raiseError(line, "Function '%s' does not exist.", identifier.c_str());
-   }
-   return nativeFunctions.at(identifier);
 }
