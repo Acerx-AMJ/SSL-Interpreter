@@ -42,6 +42,7 @@ struct Interpreter {
    ValueId allocate(Value value);
    ValueId allocateNumber(long double number, size_t line);
    ValueId allocateBoolean(bool boolean, size_t line);
+   ValueId allocateCharacter(StringId string, size_t index, size_t line);
    ValueId allocateString(StringId string, size_t line);
    ValueId allocateString(const std::string &string, size_t line);
    ValueId allocateFunction(NodeId function, Environment *environment, size_t line);

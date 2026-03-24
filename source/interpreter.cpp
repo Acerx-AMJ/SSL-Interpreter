@@ -319,7 +319,19 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
       return null;
    }
    else if (expr.type == ValueType::string) {
-      // TODO:
+      bool reversed = n.forLoop.reversed;
+      std::string &string = arena.strings[expr.string];
+
+      for (long i = reversed ? string.size() - 1 : 0; reversed ? (i >= 0) : (i < string.size()); reversed ? --i : ++i) {
+         Environment newEnvironment (&environment);
+         newEnvironment.declare(*this, false, identifier, allocateCharacter(expr.string, i, n.line), n.line);
+
+         if (!indexIdentifier.empty()) {
+            newEnvironment.declare(*this, true, indexIdentifier, allocateNumber(i, n.line), n.line);
+         }
+         evaluate(n.forLoop.body, newEnvironment);
+      }
+      return null;
    }
    else {
       raiseError(expr.line, "Cannot iterate over %s value.", getValueTypeAsString(expr.type));
@@ -479,24 +491,39 @@ ValueId Interpreter::evaluateArraySubscript(Environment &environment, NodeId nod
    ValueId right = evaluateExpr(environment, n.arraySubscript.expression);
    Value &r = valuePool[right];
 
-   if (l.type != ValueType::array) {
-      raiseError(n.line, "Expected Array value on the left side of the Array Subscript statement, "
-                         "got %s instead.", getValueTypeAsString(l.type));
-   }
-
    if (r.type != ValueType::number) {
       raiseError(n.line, "Expected Number value on the right side of the Array Subscript statement, "
                          "got %s instead.", getValueTypeAsString(r.type));
    }
 
-   std::vector<ValueId> &array = arrayPool[l.array];
-   size_t index = r.number;
+   if (l.type == ValueType::array) {
+      std::vector<ValueId> &array = arrayPool[l.array];
+      size_t index = r.number;
 
-   if (index >= array.size()) {
-      raiseError(n.line, "Array Subscript index out of bounds. %lu (rounded from %s) >= %lu.",
-         index, r.asString(*this).c_str(), array.size());
+      if (index >= array.size()) {
+         raiseError(n.line, "Array Subscript index out of bounds. %lu (rounded from %s) >= %lu.",
+            index, r.asString(*this).c_str(), array.size());
+      }
+      return array[index];
    }
-   return array[index];
+   else if (l.type == ValueType::string) {
+      std::string string = arena.strings[l.string];
+      size_t index = r.number;
+
+      if (index >= string.size()) {
+         raiseError(n.line, "Array Subscript index out of bounds. %lu (rounded from %s) >= %lu.",
+            index, r.asString(*this).c_str(), string.size());
+      }
+
+      ValueId character = allocateCharacter(l.string, index, l.line);
+      valuePool[character].lvalue = true; 
+      valuePool[character].constant = l.constant;
+      return character;
+   }
+   else {
+      raiseError(n.line, "Expected Array/String value on the left side of the Array Subscript "
+                         "statement, got %s instead.", getValueTypeAsString(l.type));
+   }
 }
 
 ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
@@ -517,16 +544,34 @@ ValueId Interpreter::evaluateAssignment(Environment &environment, NodeId node) {
       raiseError(n.line, "Cannot assign to a constant.");
    }
 
-   switch (n.assignment.op) {
-   case TokenType::equals:      l = r;                                break;
-   case TokenType::plusEquals:  l = valuePool[l.add(*this, r)];       break;
-   case TokenType::minusEquals: l = valuePool[l.subtract(*this, r)];  break;
-   case TokenType::starEquals:  l = valuePool[l.multiply(*this, r)];  break;
-   case TokenType::slashEquals: l = valuePool[l.divide(*this, r)];    break;
-   case TokenType::modEquals:   l = valuePool[l.remainder(*this, r)]; break;
-   case TokenType::powEquals:   l = valuePool[l.pow(*this, r)];       break;
-   default:
-      raiseError(n.line, "Unsupported assignment operator '%s'.", getTokenTypeAsString(n.assignment.op));
+   // special handling for characters since they can't be easily modified
+   if (l.type == ValueType::character) {
+      char &ch = arena.strings[l.character.stringId][l.character.index];
+      
+      switch (n.assignment.op) {
+      case TokenType::equals:      ch = r.asChar(*this);                                break;
+      case TokenType::plusEquals:  ch = valuePool[l.add(*this, r)].asChar(*this);       break;
+      case TokenType::minusEquals: ch = valuePool[l.subtract(*this, r)].asChar(*this);  break;
+      case TokenType::starEquals:  ch = valuePool[l.multiply(*this, r)].asChar(*this);  break;
+      case TokenType::slashEquals: ch = valuePool[l.divide(*this, r)].asChar(*this);    break;
+      case TokenType::modEquals:   ch = valuePool[l.remainder(*this, r)].asChar(*this); break;
+      case TokenType::powEquals:   ch = valuePool[l.pow(*this, r)].asChar(*this);       break;
+      default:
+         raiseError(n.line, "Unsupported assignment operator '%s'.", getTokenTypeAsString(n.assignment.op));
+      }
+   }
+   else {
+      switch (n.assignment.op) {
+      case TokenType::equals:      l = r;                                break;
+      case TokenType::plusEquals:  l = valuePool[l.add(*this, r)];       break;
+      case TokenType::minusEquals: l = valuePool[l.subtract(*this, r)];  break;
+      case TokenType::starEquals:  l = valuePool[l.multiply(*this, r)];  break;
+      case TokenType::slashEquals: l = valuePool[l.divide(*this, r)];    break;
+      case TokenType::modEquals:   l = valuePool[l.remainder(*this, r)]; break;
+      case TokenType::powEquals:   l = valuePool[l.pow(*this, r)];       break;
+      default:
+         raiseError(n.line, "Unsupported assignment operator '%s'.", getTokenTypeAsString(n.assignment.op));
+      }
    }
 
    l.constant = r.constant;
@@ -605,6 +650,14 @@ ValueId Interpreter::allocateBoolean(bool boolean, size_t line) {
    value.type = ValueType::boolean;
    value.line = line;
    value.boolean = boolean;
+   return allocate(value);
+}
+
+ValueId Interpreter::allocateCharacter(StringId stringId, size_t index, size_t line) {
+   Value value;
+   value.type = ValueType::character;
+   value.line = line;
+   value.character = {stringId, index};
    return allocate(value);
 }
 

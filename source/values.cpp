@@ -10,6 +10,8 @@ std::string Value::asPrintable(Interpreter &interpreter) {
       return "null";
    case ValueType::number:
    case ValueType::boolean:
+   case ValueType::character:
+      return std::string(1, interpreter.arena.strings[character.stringId][character.index]);
    case ValueType::string:
       return asString(interpreter);
    case ValueType::function:
@@ -46,7 +48,7 @@ ValueId Value::add(Interpreter &interpreter, const Value &r) const {
       const std::string &second = interpreter.arena.strings[r.string];
       return interpreter.allocateString(first + second, line);
    }
-   return interpreter.allocateNumber(number + r.number, line);
+   return interpreter.allocateNumber(asNumber(interpreter) + r.asNumber(interpreter), line);
 }
 
 ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
@@ -58,7 +60,7 @@ ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
    }
 
    if (type == ValueType::null || r.type == ValueType::null) return null;
-   return interpreter.allocateNumber(number - r.number, line);
+   return interpreter.allocateNumber(asNumber(interpreter) - r.asNumber(interpreter), line);
 }
 
 ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
@@ -70,7 +72,7 @@ ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
    }
 
    if (type == ValueType::null || r.type == ValueType::null) return null;
-   return interpreter.allocateNumber(number * r.number, line);
+   return interpreter.allocateNumber(asNumber(interpreter) * r.asNumber(interpreter), line);
 }
 
 ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
@@ -82,8 +84,8 @@ ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
    }
 
    if (type == ValueType::null || r.type == ValueType::null) return null;
-   if (r.number == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
-   return interpreter.allocateNumber(number / r.number, line);
+   if (r.asNumber(interpreter) == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
+   return interpreter.allocateNumber(asNumber(interpreter) / r.asNumber(interpreter), line);
 }
 
 ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
@@ -95,8 +97,8 @@ ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
    }
 
    if (type == ValueType::null || r.type == ValueType::null) return null;
-   if (r.number == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
-   return interpreter.allocateNumber(fmodl(number, r.number), line);
+   if (r.asNumber(interpreter) == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
+   return interpreter.allocateNumber(fmodl(asNumber(interpreter), r.asNumber(interpreter)), line);
 }
 
 ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
@@ -108,15 +110,20 @@ ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
    }
 
    if (type == ValueType::null || r.type == ValueType::null) return null;
-   return interpreter.allocateNumber(powl(number, r.number), line);
+   return interpreter.allocateNumber(powl(asNumber(interpreter), r.asNumber(interpreter)), line);
 }
 
 bool Value::equal(Interpreter &interpreter, const Value &r) const {
-   if (type != r.type)              return false;
-   if (type == ValueType::null)     return true;
-   if (type == ValueType::number)   return number == r.number;
-   if (type == ValueType::boolean)  return boolean == r.boolean;
-   if (type == ValueType::function) return function.function == r.function.function;
+   if (type != r.type)               return false;
+   if (type == ValueType::null)      return true;
+   if (type == ValueType::number)    return number == r.number;
+   if (type == ValueType::boolean)   return boolean == r.boolean;
+   if (type == ValueType::function)  return function.function == r.function.function;
+
+   if (type == ValueType::character) {
+      return interpreter.arena.strings[character.stringId][character.index]
+          == interpreter.arena.strings[r.character.stringId][r.character.index];
+   }
 
    if (type == ValueType::array) {
       const std::vector<ValueId> &first  = interpreter.arrayPool[array];
@@ -142,6 +149,11 @@ bool Value::equal(Interpreter &interpreter, const Value &r) const {
 bool Value::greater(Interpreter &interpreter, const Value &r) const {
    if (type == ValueType::number && r.type == ValueType::number) {
       return number > r.number;
+   }
+
+   if (type == ValueType::character && r.type == ValueType::character) {
+      return interpreter.arena.strings[character.stringId][character.index]
+           > interpreter.arena.strings[r.character.stringId][r.character.index];
    }
 
    if (type == ValueType::array && r.type == ValueType::array) {
@@ -176,9 +188,13 @@ bool Value::greater(Interpreter &interpreter, const Value &r) const {
 }
 
 std::string Value::asString(Interpreter &interpreter) const {
-   if (type == ValueType::null)    return "";
-   if (type == ValueType::boolean) return (boolean ? "true" : "false");
-   if (type == ValueType::string)  return interpreter.arena.strings[string];
+   if (type == ValueType::null)      return "";
+   if (type == ValueType::boolean)   return (boolean ? "true" : "false");
+   if (type == ValueType::string)    return interpreter.arena.strings[string];
+
+   if (type == ValueType::character) {
+      return std::string(1, interpreter.arena.strings[character.stringId][character.index]);
+   }
 
    if (type == ValueType::number) {
       std::string string = std::to_string(number);
@@ -188,16 +204,28 @@ std::string Value::asString(Interpreter &interpreter) const {
 }
 
 long double Value::asNumber(Interpreter &interpreter) const {
-   if (type == ValueType::null)    return 0;
-   if (type == ValueType::number)  return number;
+   if (type == ValueType::null)      return 0;
+   if (type == ValueType::number)    return number;
+   if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index];
    raiseError(line, "Cannot convert %s value to Number value.", getValueTypeAsString(type));
 }
 
 bool Value::asBoolean(Interpreter &interpreter) const {
-   if (type == ValueType::null)    return false;
-   if (type == ValueType::number)  return number != 0.0;
-   if (type == ValueType::boolean) return boolean;
-   if (type == ValueType::string)  return !interpreter.arena.strings[string].empty();
-   if (type == ValueType::array)   return true;
+   if (type == ValueType::null)      return false;
+   if (type == ValueType::number)    return number != 0.0;
+   if (type == ValueType::boolean)   return boolean;
+   if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index] != 0;
+   if (type == ValueType::string)    return !interpreter.arena.strings[string].empty();
+   if (type == ValueType::array)     return true;
    raiseError(line, "Cannot convert %s value to Boolean value.", getValueTypeAsString(type));
+}
+
+char Value::asChar(Interpreter &interpreter) const {
+   if (type == ValueType::null)      return 0;
+   if (type == ValueType::number)    return number;
+   if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index];
+   if (type == ValueType::string && interpreter.arena.strings[string].size() == 1) {
+      return interpreter.arena.strings[string][0];
+   }
+   raiseError(line, "Cannot convert %s value to Character value.", getValueTypeAsString(type));
 }

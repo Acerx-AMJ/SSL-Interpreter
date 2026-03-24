@@ -5,9 +5,8 @@ ASTArena::ASTArena() {
    children.reserve(256);
    strings.reserve(128);
 
-   Node null {false, StmtType::null, 0};
-   null.null = {};
-   nodes.push_back(null);
+   nodes.push_back({.ref = false, .type = StmtType::null, .line = 0, .null = {}});
+   strings.push_back(""); // char pool
 }
 
 StringId ASTArena::pushString(const std::string &string) {
