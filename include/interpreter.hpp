@@ -30,7 +30,7 @@ struct Interpreter {
 
    ValueId evaluateExpr(Environment &environment, NodeId node);
    ValueId evaluateBinaryExpr(Environment &environment, NodeId node);
-   ValueId evaluateInExpr(Environment &environment, Value &left, Value &right);
+   ValueId evaluateInExpr(Environment &environment, Value &left, NodeId right);
    ValueId evaluateTypeCast(Environment &environment, Value &left, Value &right);
    ValueId evaluateTypeChecking(Environment &environment, Value &left, Value &right);
    ValueId evaluateUnaryExpr(Environment &environment, NodeId node);

@@ -13,7 +13,7 @@ Environment::Environment(Interpreter &interpreter)
    declare(interpreter, true, "true", interpreter.allocateBoolean(true, 0), 0);
    declare(interpreter, true, "false", interpreter.allocateBoolean(false, 0), 0);
 
-   // // types
+   // types
    declare(interpreter, true, "Null", interpreter.allocateType(ValueType::null, 0), 0);
    declare(interpreter, true, "Number", interpreter.allocateType(ValueType::number, 0), 0);
    declare(interpreter, true, "Boolean", interpreter.allocateType(ValueType::boolean, 0), 0);

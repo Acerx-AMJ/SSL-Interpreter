@@ -219,7 +219,7 @@ ValueId Interpreter::evaluateMatchStmt(Environment &environment, NodeId node) {
          }
 
          if (!range.range.inclusive) {
-            r.number -= 1;
+            r.number += l.number > r.number ? 1 : -1;
          }
 
          if (l.number > r.number) {
@@ -435,6 +435,9 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
       bool result = valuePool[right].asBoolean(*this);
       return allocateBoolean(result, n.line);
    }
+   else if (n.binary.op == TokenType::kin) {
+      return evaluateInExpr(environment, l, n.binary.right);
+   }
 
    ValueId right = evaluateExpr(environment, n.binary.right);
    Value &r = valuePool[right];
@@ -452,7 +455,6 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
    case TokenType::smallerEquals: return allocateBoolean(!l.greater(*this, r), l.line);
    case TokenType::equalsEquals:  return allocateBoolean(l.equal(*this, r), l.line);
    case TokenType::notEquals:     return allocateBoolean(!l.equal(*this, r), l.line);
-   case TokenType::kin:           return evaluateInExpr(environment, l, r);
    case TokenType::kas:           return evaluateTypeCast(environment, l, r);
    case TokenType::kis:           return evaluateTypeChecking(environment, l, r);
    case TokenType::divisible: {
@@ -463,8 +465,55 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
    }
 }
 
-ValueId Interpreter::evaluateInExpr(Environment &environment, Value &left, Value &right) {
+ValueId Interpreter::evaluateInExpr(Environment &environment, Value &left, NodeId right) {
+   Node &rn = arena.get(right);
+   
+   if (rn.type == StmtType::range) {
+      ValueId left2 = evaluateExpr(environment, rn.range.left);
+      ValueId right = evaluateExpr(environment, rn.range.right);
 
+      Value &l = valuePool[left2];
+      Value &r = valuePool[right];
+
+      if (l.type != ValueType::number || r.type != ValueType::number) {
+         raiseError(left.line, "Expected both left and right side of the range statement to be "
+                               "numbers.");
+      }
+
+      if (left.type != ValueType::number) {
+         raiseError(r.line, "Expected left operand of the range to be a number.");
+      }
+
+      if (!rn.range.inclusive) {
+         r.number += l.number > r.number ? 1 : -1;
+      }
+
+      if (l.number > r.number) {
+         std::swap(l, r);
+      }
+      return allocateBoolean(left.number >= l.number && left.number <= r.number, rn.line);
+   }
+
+   ValueId value = evaluateExpr(environment, right);
+   Value &v = valuePool[value];
+
+   if (v.type == ValueType::array) {
+      for (ValueId id: arrayPool[v.array]) {
+         Value &v2 = valuePool[id];
+         if (v.equal(*this, v2)) {
+            return allocateBoolean(true, rn.line);
+         }
+      }
+      return allocateBoolean(false, rn.line);
+   }
+   else if (v.type == ValueType::string) {
+      std::string c = left.asString(*this);
+      return allocateBoolean(arena.strings[v.string].find(c) != std::string::npos, rn.line);
+   }
+   else {
+      raiseError(left.line, "Expected range or String or Array value on the left side of the in "
+                            "expression but got %s value instead.", getValueTypeAsString(v.type));
+   }
 }
 
 ValueId Interpreter::evaluateTypeCast(Environment &environment, Value &left, Value &right) {
