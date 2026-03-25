@@ -30,6 +30,9 @@ struct Interpreter {
 
    ValueId evaluateExpr(Environment &environment, NodeId node);
    ValueId evaluateBinaryExpr(Environment &environment, NodeId node);
+   ValueId evaluateInExpr(Environment &environment, Value &left, Value &right);
+   ValueId evaluateTypeCast(Environment &environment, Value &left, Value &right);
+   ValueId evaluateTypeChecking(Environment &environment, Value &left, Value &right);
    ValueId evaluateUnaryExpr(Environment &environment, NodeId node);
    ValueId evaluatePropertyAccess(Environment &environment, NodeId node);
    ValueId evaluateArraySubscript(Environment &environment, NodeId node);
@@ -43,11 +46,13 @@ struct Interpreter {
    ValueId allocateNumber(long double number, size_t line);
    ValueId allocateBoolean(bool boolean, size_t line);
    ValueId allocateCharacter(StringId string, size_t index, size_t line);
+   ValueId allocateCharacter(char ch, size_t line);
    ValueId allocateString(StringId string, size_t line);
    ValueId allocateString(const std::string &string, size_t line);
    ValueId allocateFunction(NodeId function, Environment *environment, size_t line);
    ValueId allocateNtFunction(NtFunc function);
    ValueId allocateArray(const std::vector<ValueId> &array, size_t line);
+   ValueId allocateType(ValueType type, size_t line);
    ValueId copy(ValueId id, bool arrayList = false);
 
    // Members

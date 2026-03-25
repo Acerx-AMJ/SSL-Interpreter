@@ -5,11 +5,11 @@
 #include "nativeFunctions.hpp"
 
 enum class ValueType: char {
-   null, number, boolean, character, string, function, ntFunction, array
+   null, number, boolean, character, string, function, ntFunction, array, type
 };
 
 constexpr const char *valueTypeStrings[] {
-   "Null", "Number", "Boolean", "Character", "String", "Function", "Native Function", "Array"
+   "Null", "Number", "Boolean", "Character", "String", "Function", "Function", "Array", "Type"
 };
 
 constexpr const char *getValueTypeAsString(ValueType type) {
@@ -65,6 +65,7 @@ struct Value {
       FunctionValue function;
       NtFunc nativeFn;
       ArrayId array;
+      ValueType vtype;
    };
 };
 

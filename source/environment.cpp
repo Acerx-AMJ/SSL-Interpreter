@@ -14,11 +14,14 @@ Environment::Environment(Interpreter &interpreter)
    declare(interpreter, true, "false", interpreter.allocateBoolean(false, 0), 0);
 
    // // types
-   // declare(interpreter, true, "number", interpreter.allocateString("number", 0), 0);
-   // declare(interpreter, true, "boolean", interpreter.allocateString("boolean", 0), 0);
-   // declare(interpreter, true, "string", interpreter.allocateString("string", 0), 0);
-   // declare(interpreter, true, "function", interpreter.allocateString("function", 0), 0);
-   // declare(interpreter, true, "array", interpreter.allocateString("array", 0), 0);
+   declare(interpreter, true, "Null", interpreter.allocateType(ValueType::null, 0), 0);
+   declare(interpreter, true, "Number", interpreter.allocateType(ValueType::number, 0), 0);
+   declare(interpreter, true, "Boolean", interpreter.allocateType(ValueType::boolean, 0), 0);
+   declare(interpreter, true, "Character", interpreter.allocateType(ValueType::character, 0), 0);
+   declare(interpreter, true, "String", interpreter.allocateType(ValueType::string, 0), 0);
+   declare(interpreter, true, "Function", interpreter.allocateType(ValueType::function, 0), 0);
+   declare(interpreter, true, "Array", interpreter.allocateType(ValueType::array, 0), 0);
+   declare(interpreter, true, "Type", interpreter.allocateType(ValueType::type, 0), 0);
 
    // native functions
    declare(interpreter, true, "print", interpreter.allocateNtFunction(ntfprint), 0);
@@ -26,6 +29,7 @@ Environment::Environment(Interpreter &interpreter)
    declare(interpreter, true, "printf", interpreter.allocateNtFunction(ntfprintf), 0);
    declare(interpreter, true, "printfln", interpreter.allocateNtFunction(ntfprintfln), 0);
    declare(interpreter, true, "format", interpreter.allocateNtFunction(ntfformat), 0);
+   declare(interpreter, true, "typeof", interpreter.allocateNtFunction(ntftypeof), 0);
 }
 
 void Environment::declare(Interpreter &interpreter, bool isConstant, const std::string &identifier, ValueId value, size_t line) {

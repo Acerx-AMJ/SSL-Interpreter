@@ -452,12 +452,50 @@ ValueId Interpreter::evaluateBinaryExpr(Environment &environment, NodeId node) {
    case TokenType::smallerEquals: return allocateBoolean(!l.greater(*this, r), l.line);
    case TokenType::equalsEquals:  return allocateBoolean(l.equal(*this, r), l.line);
    case TokenType::notEquals:     return allocateBoolean(!l.equal(*this, r), l.line);
+   case TokenType::kin:           return evaluateInExpr(environment, l, r);
+   case TokenType::kas:           return evaluateTypeCast(environment, l, r);
+   case TokenType::kis:           return evaluateTypeChecking(environment, l, r);
    case TokenType::divisible: {
       ValueId result = l.remainder(*this, r);
       return allocateBoolean(!valuePool[result].asBoolean(*this), n.line);
    } default:
       raiseError(n.line, "Unsupported binary operator '%s'.", getTokenTypeAsString(n.binary.op));
    }
+}
+
+ValueId Interpreter::evaluateInExpr(Environment &environment, Value &left, Value &right) {
+
+}
+
+ValueId Interpreter::evaluateTypeCast(Environment &environment, Value &left, Value &right) {
+   if (right.type != ValueType::type) {
+      raiseError(right.line, "Expected Type value on the left of as expression but got '%s' instead.",
+         getValueTypeAsString(right.type));
+   }
+
+   switch (right.vtype) {
+   case ValueType::number:
+      return allocateNumber(left.asNumber(*this), left.line);
+   case ValueType::boolean:
+      return allocateBoolean(left.asBoolean(*this), left.line);
+   case ValueType::character:
+      return allocateCharacter(left.asChar(*this), left.line);
+   case ValueType::string:
+      return allocateString(left.asString(*this), left.line);
+   default:
+      raiseError(right.line, "Cannot cast a value to %s value.", getValueTypeAsString(right.vtype));
+   }
+}
+
+ValueId Interpreter::evaluateTypeChecking(Environment &environment, Value &left, Value &right) {
+   if (right.type != ValueType::type) {
+      raiseError(right.line, "Expected Type value on the left of is expression but got '%s' instead.",
+         getValueTypeAsString(right.type));
+   }
+
+   // native functions and functions are the same type!
+   ValueType type = left.type == ValueType::ntFunction ? ValueType::function : left.type;
+   return type == right.vtype;
 }
 
 ValueId Interpreter::evaluateUnaryExpr(Environment &environment, NodeId node) {
@@ -662,6 +700,15 @@ ValueId Interpreter::allocateCharacter(StringId stringId, size_t index, size_t l
    return allocate(value);
 }
 
+ValueId Interpreter::allocateCharacter(char ch, size_t line) {
+   Value value;
+   value.type = ValueType::character;
+   value.line = line;
+   value.character = {0, arena.strings[0].size()};
+   arena.strings[0].push_back(ch);
+   return allocate(value);
+}
+
 ValueId Interpreter::allocateString(StringId string, size_t line) {
    Value value;
    value.type = ValueType::string;
@@ -700,6 +747,14 @@ ValueId Interpreter::allocateArray(const std::vector<ValueId> &array, size_t lin
    value.line = line;
    value.array = arrayPool.size();
    arrayPool.push_back(array);
+   return allocate(value);
+}
+
+ValueId Interpreter::allocateType(ValueType type, size_t line) {
+   Value value;
+   value.type = ValueType::type;
+   value.line = line;
+   value.vtype = type;
    return allocate(value);
 }
 

@@ -33,8 +33,11 @@ struct Parser {
    NodeId parseNullCoalesceExpr();
    NodeId parseLogicalOrExpr();
    NodeId parseLogicalAndExpr();
+   NodeId parseLogicalNotExpr();
    NodeId parseEqualityExpr();
    NodeId parseRelationalExpr();
+   NodeId parseInExpr();
+   NodeId parseTypeCastingAndChecking();
    NodeId parseAdditiveExpr();
    NodeId parseMultiplicativeExpr();
    NodeId parseExponentiativeExpr();

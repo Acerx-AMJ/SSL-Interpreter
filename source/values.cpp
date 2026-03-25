@@ -13,6 +13,7 @@ std::string Value::asPrintable(Interpreter &interpreter) {
    case ValueType::number:
    case ValueType::boolean:
    case ValueType::string:
+   case ValueType::type:
       return asString(interpreter);
    case ValueType::function:
    case ValueType::ntFunction:
@@ -35,10 +36,16 @@ ValueId Value::negate(Interpreter &interpreter) const {
    raiseError(line, "Cannot perform negation on %s value.", getValueTypeAsString(type));
 }
 
+bool isCommonlyInvalidBinaryOpTypes(ValueType t1, ValueType t2) {
+   return t1 == ValueType::function   || t2 == ValueType::function
+       || t1 == ValueType::ntFunction || t2 == ValueType::ntFunction
+       || t1 == ValueType::boolean    || t2 == ValueType::boolean
+       || t1 == ValueType::array      || t2 == ValueType::array
+       || t1 == ValueType::type       || t2 == ValueType::type;
+}
+
 ValueId Value::add(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function   || r.type == ValueType::function
-    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
-    || type == ValueType::boolean    || r.type == ValueType::boolean) {
+   if (isCommonlyInvalidBinaryOpTypes(type, r.type)) {
       raiseError(line, "Cannot perform addition on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -53,10 +60,7 @@ ValueId Value::add(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function   || r.type == ValueType::function
-    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
-    || type == ValueType::boolean    || r.type == ValueType::boolean
-    || type == ValueType::string     || r.type == ValueType::string) {
+   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
       raiseError(line, "Cannot perform subtraction on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -66,10 +70,7 @@ ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function   || r.type == ValueType::function
-    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
-    || type == ValueType::boolean    || r.type == ValueType::boolean
-    || type == ValueType::string     || r.type == ValueType::string) {
+   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
       raiseError(line, "Cannot perform multiplication on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -79,10 +80,7 @@ ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function   || r.type == ValueType::function
-    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
-    || type == ValueType::boolean    || r.type == ValueType::boolean
-    || type == ValueType::string     || r.type == ValueType::string) {
+   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
       raiseError(line, "Cannot perform division on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -93,10 +91,7 @@ ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function   || r.type == ValueType::function
-    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
-    || type == ValueType::boolean    || r.type == ValueType::boolean
-    || type == ValueType::string     || r.type == ValueType::string) {
+   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
       raiseError(line, "Cannot perform modulo on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -107,10 +102,7 @@ ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
 }
 
 ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function   || r.type == ValueType::function
-    || type == ValueType::ntFunction || r.type == ValueType::ntFunction
-    || type == ValueType::boolean    || r.type == ValueType::boolean
-    || type == ValueType::string     || r.type == ValueType::string) {
+   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
       raiseError(line, "Cannot perform exponentiation on %s value and %s value.",
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
@@ -126,10 +118,11 @@ bool Value::equal(Interpreter &interpreter, const Value &r) const {
          getValueTypeAsString(type), getValueTypeAsString(r.type));
    }
 
-   if (type != r.type)                return false;
-   if (type == ValueType::null)       return true;
-   if (type == ValueType::number)     return number == r.number;
-   if (type == ValueType::boolean)    return boolean == r.boolean;
+   if (type != r.type)             return false;
+   if (type == ValueType::null)    return true;
+   if (type == ValueType::number)  return number == r.number;
+   if (type == ValueType::boolean) return boolean == r.boolean;
+   if (type == ValueType::type)    return vtype == r.vtype;
 
    if (type == ValueType::character) {
       return interpreter.arena.strings[character.stringId][character.index]
@@ -199,9 +192,10 @@ bool Value::greater(Interpreter &interpreter, const Value &r) const {
 }
 
 std::string Value::asString(Interpreter &interpreter) const {
-   if (type == ValueType::null)      return "";
-   if (type == ValueType::boolean)   return (boolean ? "true" : "false");
-   if (type == ValueType::string)    return interpreter.arena.strings[string];
+   if (type == ValueType::type)    return getValueTypeAsString(vtype);
+   if (type == ValueType::null)    return "";
+   if (type == ValueType::boolean) return (boolean ? "true" : "false");
+   if (type == ValueType::string)  return interpreter.arena.strings[string];
 
    if (type == ValueType::character) {
       return std::string(1, interpreter.arena.strings[character.stringId][character.index]);

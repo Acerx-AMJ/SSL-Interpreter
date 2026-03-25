@@ -572,16 +572,28 @@ NodeId Parser::parseLogicalOrExpr() {
 
 NodeId Parser::parseLogicalAndExpr() {
    size_t originalLine = line();
-   NodeId left = parseEqualityExpr();
+   NodeId left = parseLogicalNotExpr();
 
    while (is(TokenType::kand)) {
       TokenType op = current().type;
       advance();
 
-      NodeId right = parseEqualityExpr();
+      NodeId right = parseLogicalNotExpr();
       left = arena.allocateBinary(left, right, op, originalLine);
    }
    return left;
+}
+
+NodeId Parser::parseLogicalNotExpr() {
+   if (is(TokenType::knot)) {
+      size_t originalLine = line();
+      TokenType op = current().type;
+
+      advance();
+      NodeId value = parseLogicalNotExpr();
+      return arena.allocateUnary(value, op, originalLine);
+   }
+   return parseEqualityExpr();
 }
 
 NodeId Parser::parseEqualityExpr() {
@@ -600,10 +612,38 @@ NodeId Parser::parseEqualityExpr() {
 
 NodeId Parser::parseRelationalExpr() {
    size_t originalLine = line();
-   NodeId left = parseAdditiveExpr();
+   NodeId left = parseInExpr();
 
    while (is(TokenType::bigger) || is(TokenType::biggerEquals) || is(TokenType::smaller)
        || is(TokenType::smallerEquals)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseInExpr();
+      left = arena.allocateBinary(left, right, op, originalLine);
+   }
+   return left;
+}
+
+NodeId Parser::parseInExpr() {
+   size_t originalLine = line();
+   NodeId left = parseTypeCastingAndChecking();
+
+   while (is(TokenType::kin)) {
+      TokenType op = current().type;
+      advance();
+
+      NodeId right = parseRangeExpr();
+      left = arena.allocateBinary(left, right, op, originalLine);
+   }
+   return left;
+}
+
+NodeId Parser::parseTypeCastingAndChecking() {
+   size_t originalLine = line();
+   NodeId left = parseAdditiveExpr();
+
+   while (is(TokenType::kas) || is(TokenType::kis)) {
       TokenType op = current().type;
       advance();
 
@@ -656,7 +696,7 @@ NodeId Parser::parseExponentiativeExpr() {
 }
 
 NodeId Parser::parseUnaryExpr() {
-   if (is(TokenType::plus) || is(TokenType::minus) || is(TokenType::knot) || is(TokenType::ref)) {
+   if (is(TokenType::plus) || is(TokenType::minus) || is(TokenType::ref)) {
       size_t originalLine = line();
       TokenType op = current().type;
 

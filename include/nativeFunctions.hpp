@@ -16,4 +16,7 @@ NTFUNC(printf);
 NTFUNC(printfln);
 NTFUNC(format);
 
+// type utility
+NTFUNC(typeof);
+
 #endif

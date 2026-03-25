@@ -94,3 +94,12 @@ NTFUNC(format) {
       raiseError(line, "format: brace count does not match argument count/the formatting is invalid.");
    }
 }
+
+// type utility
+
+NTFUNC(typeof) {
+   if (args.size() != 1) {
+      raiseError(line, "typeof: expected exactly 1 argument.");
+   }
+   return interpreter.allocateType(interpreter.valuePool[args[0]].type, line);
+}
