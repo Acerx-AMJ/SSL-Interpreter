@@ -500,7 +500,7 @@ ValueId Interpreter::evaluateInExpr(Environment &environment, Value &left, NodeI
    if (v.type == ValueType::array) {
       for (ValueId id: arrayPool[v.array]) {
          Value &v2 = valuePool[id];
-         if (v.equal(*this, v2)) {
+         if (left.equal(*this, v2)) {
             return allocateBoolean(true, rn.line);
          }
       }
