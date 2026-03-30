@@ -27,6 +27,6 @@ int main(int argc, char *argv[]) {
    Environment global (interpreter);
 
    interpreter.evaluate(program.nodes, global);
-   interpreter.callMain(global, argc, argv);
+   interpreter.callMain(global);
    return 0;
 }

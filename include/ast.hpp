@@ -11,7 +11,7 @@ enum class StmtType: char {
    forLoop, loop, whileLoop, doWhileLoop, breakStmt, continueStmt,
    returnStmt, unlessStmt, importStmt,
    assignment, binary, unary, property, arraySubscript, call, range,
-   enumEntry, identifier, number, string, array, null, program,
+   identifier, number, string, array, null, program,
 };
 
 constexpr const char *statementTypeStrings[] {
@@ -20,7 +20,7 @@ constexpr const char *statementTypeStrings[] {
    "Loop", "While Loop", "Do While Loop", "Break Statement", "Continue Statement",
    "Return Statement", "Unless Statement", "Import Statement", "Assignment", "Binary Expression",
    "Unary Expression", "Property Access", "Array Subscript", "Function Call", "Range",
-   "Enumeration Entry", "Identifier", "Number", "String", "Array", "Null", "Scope",
+   "Identifier", "Number", "String", "Array", "Null", "Scope",
 };
 
 constexpr const char *getStatementTypeAsString(StmtType type) {
@@ -167,12 +167,6 @@ struct Range {
    NodeId right;
 };
 
-struct EnumEntry {
-   StringId identifier;
-   NodeId value;
-   NodeList args;
-};
-
 struct IdentifierLiteral {
    StringId id;
 };
@@ -227,7 +221,6 @@ struct Node {
       ArraySubscript arraySubscript;
       FunctionCall fnCall;
       Range range;
-      EnumEntry enumEntry;
       IdentifierLiteral identifier;
       NumberLiteral number;
       StringLiteral string;
@@ -277,7 +270,6 @@ struct ASTArena {
    NodeId allocateArraySubscript(NodeId left, NodeId expression, size_t line);
    NodeId allocateFnCall(NodeId left, const std::vector<NodeId> &args, size_t line);
    NodeId allocateRange(bool inclusive, NodeId left, NodeId right, size_t line);
-   NodeId allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, size_t line);
    NodeId allocateIdentifier(const std::string &string, size_t line);
    NodeId allocateNumber(long double number, size_t line);
    NodeId allocateString(const std::string &string, size_t line);

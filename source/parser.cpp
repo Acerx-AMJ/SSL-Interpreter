@@ -189,34 +189,10 @@ NodeId Parser::parseEnumDecl(bool isPublic) {
       }
 
       expect(StmtType::enumDecl, TokenType::identifier);
-      std::vector<NodeId> args;
       std::string identifier = current().lexeme;
-      NodeId value = null;
-
       advance();
-      if (is(TokenType::lparen)) {
-         do {
-            advance();
-            if (is(TokenType::rparen)) {
-               break;
-            }
 
-            expect(StmtType::enumDecl, TokenType::identifier);
-            NodeId identifier = parsePrimaryExpr();
-
-            args.push_back(identifier);
-         } while (is(TokenType::comma));
-
-         expect(StmtType::enumDecl, TokenType::rparen);
-         advance();
-      }
-
-      if (is(TokenType::equals)) {
-         advance();
-         value = parseExpr();
-      }
-      
-      NodeId entry = arena.allocateEnumEntry(identifier, value, args, entryLine);
+      NodeId entry = arena.allocateIdentifier(identifier, entryLine);
       entries.push_back(entry);
    } while (is(TokenType::comma));
 

@@ -13,7 +13,9 @@ ValueId Interpreter::evaluate(NodeList program, Environment &environment) {
    ValueId last;
    for (size_t index = program.start; index < program.start + program.size; ++index) {
       last = evaluateStmt(environment, arena.children[index]);
-      if (returning) return returnValue;
+
+      if (returning)              return returnValue;
+      if (continuing || breaking) return last;
    }
    return last;
 }
@@ -71,7 +73,7 @@ ValueId Interpreter::callFunction(Environment &environment, NodeId function, con
    return returnsRef ? result : copy(result);
 }
 
-void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
+void Interpreter::callMain(Environment &global) {
    if (!global.exists("main")) return;
    ValueId main = global.get("main", 0);
    Value &m = valuePool[main];
@@ -82,7 +84,6 @@ void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
    }
 
    Node &n = arena.get(m.function.function);
-   Environment newEnvironment (&global);
    size_t argCount = n.fnDecl.parameters.size;
 
    if (n.type != StmtType::fnDecl) {
@@ -90,25 +91,11 @@ void Interpreter::callMain(Environment &global, int argc, char *argv[]) {
          getStatementTypeAsString(n.type));
    }
 
-   if (argCount > 1) {
-      raiseError(n.line, "Expected 'main' to have 0 or 1 parameters but got %d instead.", argCount);
+   if (argCount != 0) {
+      raiseError(n.line, "Expected 'main' to have 0 parameters but got %d instead.", argCount);
    }
 
-   if (argCount == 1) {
-      std::vector<ValueId> args;
-      args.reserve(argc - 2);
-
-      for (int i = 2; i < argc; ++i) {
-         ValueId stringValue = allocateString(argv[i], n.line);
-         valuePool[stringValue].constant = true;
-         args.push_back(stringValue);
-      }
-
-      std::string &identifier = arena.strings[arena.get(arena.children[n.fnDecl.parameters.start]).identifier.id];
-      ValueId array = allocateArray(args, n.line);
-      newEnvironment.declare(*this, true, identifier, array, n.line);
-   }
-
+   Environment newEnvironment (&global);
    evaluate(n.fnDecl.body, newEnvironment);
    returning = false;
 }
@@ -289,7 +276,20 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
          Environment newEnvironment (&environment);
          newEnvironment.declare(*this, true, identifier, allocateNumber(i, n.line), n.line);
          evaluate(n.forLoop.body, newEnvironment);
-         if (returning) return null;
+
+         if (returning) {
+            return null;
+         }
+
+         if (continuing) {
+            continuing = false;
+            continue;
+         }
+
+         if (breaking) {
+            breaking = false;
+            break;
+         }
       }
       return null;
    }
@@ -311,7 +311,20 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
             newEnvironment.declare(*this, true, indexIdentifier, allocateNumber(i, n.line), n.line);
          }
          evaluate(n.forLoop.body, newEnvironment);
-         if (returning) return null;
+
+         if (returning) {
+            return null;
+         }
+
+         if (continuing) {
+            continuing = false;
+            continue;
+         }
+
+         if (breaking) {
+            breaking = false;
+            break;
+         }
       }
       return null;
    }
@@ -327,7 +340,20 @@ ValueId Interpreter::evaluateForLoop(Environment &environment, NodeId node) {
             newEnvironment.declare(*this, true, indexIdentifier, allocateNumber(i, n.line), n.line);
          }
          evaluate(n.forLoop.body, newEnvironment);
-         if (returning) return null;
+
+         if (returning) {
+            return null;
+         }
+
+         if (continuing) {
+            continuing = false;
+            continue;
+         }
+
+         if (breaking) {
+            breaking = false;
+            break;
+         }
       }
       return null;
    }
@@ -341,7 +367,20 @@ ValueId Interpreter::evaluateLoop(Environment &environment, NodeId node) {
    while (true) {
       Environment newEnvironment (&environment);
       evaluate(n.loop.body, newEnvironment);
-      if (returning) return null;
+
+      if (returning) {
+         return null;
+      }
+
+      if (continuing) {
+         continuing = false;
+         continue;
+      }
+
+      if (breaking) {
+         breaking = false;
+         break;
+      }
    }
    return null;
 }
@@ -355,7 +394,20 @@ ValueId Interpreter::evaluateWhileLoop(Environment &environment, NodeId node) {
 
       Environment newEnvironment (&environment);
       evaluate(n.whileLoop.statement, newEnvironment);
-      if (returning) return null;
+
+      if (returning) {
+         return null;
+      }
+
+      if (continuing) {
+         continuing = false;
+         continue;
+      }
+
+      if (breaking) {
+         breaking = false;
+         break;
+      }
    }
    return null;
 }
@@ -368,17 +420,32 @@ ValueId Interpreter::evaluateDoWhileLoop(Environment &environment, NodeId node) 
 
       ValueId expression = evaluateExpr(environment, n.whileLoop.expression);
       Value &expr = valuePool[expression];
-      if (returning || !expr.asBoolean(*this)) return null;
+
+      if (returning || !expr.asBoolean(*this)) {
+         return null;
+      }
+
+      if (continuing) {
+         continuing = false;
+         continue;
+      }
+
+      if (breaking) {
+         breaking = false;
+         break;
+      }
    }
    return null;
 }
 
 ValueId Interpreter::evaluateBreak(Environment &environment, NodeId node) {
-
+   breaking = true;
+   return null;
 }
 
 ValueId Interpreter::evaluateContinue(Environment &environment, NodeId node) {
-   
+   continuing = true;
+   return null;
 }
 
 ValueId Interpreter::evaluateReturnStmt(Environment &environment, NodeId node) {

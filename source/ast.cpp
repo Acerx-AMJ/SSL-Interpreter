@@ -165,12 +165,6 @@ void ASTArena::print(NodeId id, int indentation) const {
       print(node.range.left, indentation + 2);
       print(node.range.right, indentation + 2);
       break;
-   } case StmtType::enumEntry: {
-      printf("%s:", strings[node.enumEntry.identifier].c_str());
-      print(node.enumEntry.value, indentation + 1);
-      printf("\n%*sArguments:", indentation + 1, "");
-      printList(node.enumEntry.args, indentation + 2);
-      break;
    } case StmtType::identifier: {
       printf("%s", strings[node.identifier.id].c_str());
       break;
@@ -392,14 +386,6 @@ NodeId ASTArena::allocateRange(bool inclusive, NodeId left, NodeId right, size_t
    node.type = StmtType::range;
    node.line = line;
    node.range = {inclusive, left, right};
-   return allocate(node);
-}
-
-NodeId ASTArena::allocateEnumEntry(const std::string &identifier, NodeId value, const std::vector<NodeId> &args, size_t line) {
-   Node node;
-   node.type = StmtType::enumEntry;
-   node.line = line;
-   node.enumEntry = {pushString(identifier), value, pushVector(args)};
    return allocate(node);
 }
 

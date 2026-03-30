@@ -8,7 +8,7 @@ struct Interpreter {
 
    ValueId evaluate(NodeList program, Environment &environment);
    ValueId callFunction(Environment &environment, NodeId function, const std::vector<ValueId> &args, size_t line);
-   void callMain(Environment &environment, int argc, char *argv[]);
+   void callMain(Environment &environment);
 
    // statement evaluation
 
@@ -62,6 +62,8 @@ struct Interpreter {
    std::vector<std::vector<ValueId>> arrayPool;
 
    bool returning = false;
+   bool breaking = false;
+   bool continuing = false;
    ValueId returnValue;
 };
 
