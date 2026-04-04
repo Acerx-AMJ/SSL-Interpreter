@@ -1,236 +1,236 @@
-#include "error.hpp"
-#include "interpreter.hpp"
-#include "values.hpp"
-#include <algorithm>
-#include <cmath>
+// #include "error.hpp"
+// #include "interpreter.hpp"
+// #include "values.hpp"
+// #include <algorithm>
+// #include <cmath>
 
-std::string Value::asPrintable(Interpreter &interpreter) {
-   switch (type) {
-   case ValueType::null:
-      return "null";
-   case ValueType::character:
-      return std::string(1, interpreter.arena.strings[character.stringId][character.index]);
-   case ValueType::number:
-   case ValueType::boolean:
-   case ValueType::string:
-   case ValueType::type:
-      return asString(interpreter);
-   case ValueType::function:
-   case ValueType::ntFunction:
-      return "[function]";
-   case ValueType::array: {
-      std::string result = "[ ";
-      for (ValueId id: interpreter.arrayPool[array]) {
-         Value &value = interpreter.valuePool[id];
-         result += value.asPrintable(interpreter) + ", ";
-      }
-      return result + "]";
-   } default:
-      raiseError(line, "%s value is not printable.", getValueTypeAsString(type));
-   }
-}
+// std::string Value::asPrintable(Interpreter &interpreter) {
+//    switch (type) {
+//    case ValueType::null:
+//       return "null";
+//    case ValueType::character:
+//       return std::string(1, interpreter.arena.strings[character.stringId][character.index]);
+//    case ValueType::number:
+//    case ValueType::boolean:
+//    case ValueType::string:
+//    case ValueType::type:
+//       return asString(interpreter);
+//    case ValueType::function:
+//    case ValueType::ntFunction:
+//       return "[function]";
+//    case ValueType::array: {
+//       std::string result = "[ ";
+//       for (ValueId id: interpreter.arrayPool[array]) {
+//          Value &value = interpreter.valuePool[id];
+//          result += value.asPrintable(interpreter) + ", ";
+//       }
+//       return result + "]";
+//    } default:
+//       raiseError(line, "%s value is not printable.", getValueTypeAsString(type));
+//    }
+// }
 
-ValueId Value::negate(Interpreter &interpreter) const {
-   if (type == ValueType::null)   return null;
-   if (type == ValueType::number) return interpreter.allocateNumber(-number, line);
-   raiseError(line, "Cannot perform negation on %s value.", getValueTypeAsString(type));
-}
+// ValueId Value::negate(Interpreter &interpreter) const {
+//    if (type == ValueType::null)   return null;
+//    if (type == ValueType::number) return interpreter.allocateNumber(-number, line);
+//    raiseError(line, "Cannot perform negation on %s value.", getValueTypeAsString(type));
+// }
 
-bool isCommonlyInvalidBinaryOpTypes(ValueType t1, ValueType t2) {
-   return t1 == ValueType::function   || t2 == ValueType::function
-       || t1 == ValueType::ntFunction || t2 == ValueType::ntFunction
-       || t1 == ValueType::boolean    || t2 == ValueType::boolean
-       || t1 == ValueType::array      || t2 == ValueType::array
-       || t1 == ValueType::type       || t2 == ValueType::type;
-}
+// bool isCommonlyInvalidBinaryOpTypes(ValueType t1, ValueType t2) {
+//    return t1 == ValueType::function   || t2 == ValueType::function
+//        || t1 == ValueType::ntFunction || t2 == ValueType::ntFunction
+//        || t1 == ValueType::boolean    || t2 == ValueType::boolean
+//        || t1 == ValueType::array      || t2 == ValueType::array
+//        || t1 == ValueType::type       || t2 == ValueType::type;
+// }
 
-ValueId Value::add(Interpreter &interpreter, const Value &r) const {
-   if (isCommonlyInvalidBinaryOpTypes(type, r.type)) {
-      raiseError(line, "Cannot perform addition on %s value and %s value.",
-         getValueTypeAsString(type), getValueTypeAsString(r.type));
-   }
+// ValueId Value::add(Interpreter &interpreter, const Value &r) const {
+//    if (isCommonlyInvalidBinaryOpTypes(type, r.type)) {
+//       raiseError(line, "Cannot perform addition on %s value and %s value.",
+//          getValueTypeAsString(type), getValueTypeAsString(r.type));
+//    }
    
-   if (type == ValueType::null || r.type == ValueType::null) return null;
-   if (type == ValueType::string || r.type == ValueType::string) {
-      const std::string &first  = interpreter.arena.strings[string];
-      const std::string &second = interpreter.arena.strings[r.string];
-      return interpreter.allocateString(first + second, line);
-   }
-   return interpreter.allocateNumber(asNumber(interpreter) + r.asNumber(interpreter), line);
-}
+//    if (type == ValueType::null || r.type == ValueType::null) return null;
+//    if (type == ValueType::string || r.type == ValueType::string) {
+//       const std::string &first  = interpreter.arena.strings[string];
+//       const std::string &second = interpreter.arena.strings[r.string];
+//       return interpreter.allocateString(first + second, line);
+//    }
+//    return interpreter.allocateNumber(asNumber(interpreter) + r.asNumber(interpreter), line);
+// }
 
-ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
-   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
-      raiseError(line, "Cannot perform subtraction on %s value and %s value.",
-         getValueTypeAsString(type), getValueTypeAsString(r.type));
-   }
+// ValueId Value::subtract(Interpreter &interpreter, const Value &r) const {
+//    if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
+//       raiseError(line, "Cannot perform subtraction on %s value and %s value.",
+//          getValueTypeAsString(type), getValueTypeAsString(r.type));
+//    }
 
-   if (type == ValueType::null || r.type == ValueType::null) return null;
-   return interpreter.allocateNumber(asNumber(interpreter) - r.asNumber(interpreter), line);
-}
+//    if (type == ValueType::null || r.type == ValueType::null) return null;
+//    return interpreter.allocateNumber(asNumber(interpreter) - r.asNumber(interpreter), line);
+// }
 
-ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
-   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
-      raiseError(line, "Cannot perform multiplication on %s value and %s value.",
-         getValueTypeAsString(type), getValueTypeAsString(r.type));
-   }
+// ValueId Value::multiply(Interpreter &interpreter, const Value &r) const {
+//    if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
+//       raiseError(line, "Cannot perform multiplication on %s value and %s value.",
+//          getValueTypeAsString(type), getValueTypeAsString(r.type));
+//    }
 
-   if (type == ValueType::null || r.type == ValueType::null) return null;
-   return interpreter.allocateNumber(asNumber(interpreter) * r.asNumber(interpreter), line);
-}
+//    if (type == ValueType::null || r.type == ValueType::null) return null;
+//    return interpreter.allocateNumber(asNumber(interpreter) * r.asNumber(interpreter), line);
+// }
 
-ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
-   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
-      raiseError(line, "Cannot perform division on %s value and %s value.",
-         getValueTypeAsString(type), getValueTypeAsString(r.type));
-   }
+// ValueId Value::divide(Interpreter &interpreter, const Value &r) const {
+//    if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
+//       raiseError(line, "Cannot perform division on %s value and %s value.",
+//          getValueTypeAsString(type), getValueTypeAsString(r.type));
+//    }
 
-   if (type == ValueType::null || r.type == ValueType::null) return null;
-   if (r.asNumber(interpreter) == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
-   return interpreter.allocateNumber(asNumber(interpreter) / r.asNumber(interpreter), line);
-}
+//    if (type == ValueType::null || r.type == ValueType::null) return null;
+//    if (r.asNumber(interpreter) == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
+//    return interpreter.allocateNumber(asNumber(interpreter) / r.asNumber(interpreter), line);
+// }
 
-ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
-   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
-      raiseError(line, "Cannot perform modulo on %s value and %s value.",
-         getValueTypeAsString(type), getValueTypeAsString(r.type));
-   }
+// ValueId Value::remainder(Interpreter &interpreter, const Value &r) const {
+//    if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
+//       raiseError(line, "Cannot perform modulo on %s value and %s value.",
+//          getValueTypeAsString(type), getValueTypeAsString(r.type));
+//    }
 
-   if (type == ValueType::null || r.type == ValueType::null) return null;
-   if (r.asNumber(interpreter) == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
-   return interpreter.allocateNumber(fmodl(asNumber(interpreter), r.asNumber(interpreter)), line);
-}
+//    if (type == ValueType::null || r.type == ValueType::null) return null;
+//    if (r.asNumber(interpreter) == 0.0) return interpreter.allocateNumber(0.0, line); // defined behaviour
+//    return interpreter.allocateNumber(fmodl(asNumber(interpreter), r.asNumber(interpreter)), line);
+// }
 
-ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
-   if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
-      raiseError(line, "Cannot perform exponentiation on %s value and %s value.",
-         getValueTypeAsString(type), getValueTypeAsString(r.type));
-   }
+// ValueId Value::pow(Interpreter &interpreter, const Value &r) const {
+//    if (isCommonlyInvalidBinaryOpTypes(type, r.type) || type == ValueType::string || r.type == ValueType::string) {
+//       raiseError(line, "Cannot perform exponentiation on %s value and %s value.",
+//          getValueTypeAsString(type), getValueTypeAsString(r.type));
+//    }
 
-   if (type == ValueType::null || r.type == ValueType::null) return null;
-   return interpreter.allocateNumber(powl(asNumber(interpreter), r.asNumber(interpreter)), line);
-}
+//    if (type == ValueType::null || r.type == ValueType::null) return null;
+//    return interpreter.allocateNumber(powl(asNumber(interpreter), r.asNumber(interpreter)), line);
+// }
 
-bool Value::equal(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::function   || r.type == ValueType::function
-    || type == ValueType::ntFunction || r.type == ValueType::ntFunction) {
-      raiseError(line, "Cannot compare %s value to %s value.",
-         getValueTypeAsString(type), getValueTypeAsString(r.type));
-   }
+// bool Value::equal(Interpreter &interpreter, const Value &r) const {
+//    if (type == ValueType::function   || r.type == ValueType::function
+//     || type == ValueType::ntFunction || r.type == ValueType::ntFunction) {
+//       raiseError(line, "Cannot compare %s value to %s value.",
+//          getValueTypeAsString(type), getValueTypeAsString(r.type));
+//    }
 
-   if (type != r.type)             return false;
-   if (type == ValueType::null)    return true;
-   if (type == ValueType::number)  return number == r.number;
-   if (type == ValueType::boolean) return boolean == r.boolean;
-   if (type == ValueType::type)    return vtype == r.vtype;
+//    if (type != r.type)             return false;
+//    if (type == ValueType::null)    return true;
+//    if (type == ValueType::number)  return number == r.number;
+//    if (type == ValueType::boolean) return boolean == r.boolean;
+//    if (type == ValueType::type)    return vtype == r.vtype;
 
-   if (type == ValueType::character) {
-      return interpreter.arena.strings[character.stringId][character.index]
-          == interpreter.arena.strings[r.character.stringId][r.character.index];
-   }
+//    if (type == ValueType::character) {
+//       return interpreter.arena.strings[character.stringId][character.index]
+//           == interpreter.arena.strings[r.character.stringId][r.character.index];
+//    }
 
-   if (type == ValueType::array) {
-      const std::vector<ValueId> &first  = interpreter.arrayPool[array];
-      const std::vector<ValueId> &second = interpreter.arrayPool[r.array];
-      if (first.size() != second.size()) return false;
+//    if (type == ValueType::array) {
+//       const std::vector<ValueId> &first  = interpreter.arrayPool[array];
+//       const std::vector<ValueId> &second = interpreter.arrayPool[r.array];
+//       if (first.size() != second.size()) return false;
 
-      for (size_t i = 0; i < first.size(); ++i) {
-         const Value &firstValue  = interpreter.valuePool[first[i]];
-         const Value &secondValue = interpreter.valuePool[second[i]];
+//       for (size_t i = 0; i < first.size(); ++i) {
+//          const Value &firstValue  = interpreter.valuePool[first[i]];
+//          const Value &secondValue = interpreter.valuePool[second[i]];
 
-         if (!firstValue.equal(interpreter, secondValue)) {
-            return false;
-         }
-      }
-      return true;
-   }
+//          if (!firstValue.equal(interpreter, secondValue)) {
+//             return false;
+//          }
+//       }
+//       return true;
+//    }
 
-   const std::string &first  = interpreter.arena.strings[string];
-   const std::string &second = interpreter.arena.strings[r.string];
-   return first == second;
-}
+//    const std::string &first  = interpreter.arena.strings[string];
+//    const std::string &second = interpreter.arena.strings[r.string];
+//    return first == second;
+// }
 
-bool Value::greater(Interpreter &interpreter, const Value &r) const {
-   if (type == ValueType::number && r.type == ValueType::number) {
-      return number > r.number;
-   }
+// bool Value::greater(Interpreter &interpreter, const Value &r) const {
+//    if (type == ValueType::number && r.type == ValueType::number) {
+//       return number > r.number;
+//    }
 
-   if (type == ValueType::character && r.type == ValueType::character) {
-      return interpreter.arena.strings[character.stringId][character.index]
-           > interpreter.arena.strings[r.character.stringId][r.character.index];
-   }
+//    if (type == ValueType::character && r.type == ValueType::character) {
+//       return interpreter.arena.strings[character.stringId][character.index]
+//            > interpreter.arena.strings[r.character.stringId][r.character.index];
+//    }
 
-   if (type == ValueType::array && r.type == ValueType::array) {
-      const std::vector<ValueId> &first  = interpreter.arrayPool[array];
-      const std::vector<ValueId> &second = interpreter.arrayPool[r.array];
-      size_t size = std::min(first.size(), second.size());
+//    if (type == ValueType::array && r.type == ValueType::array) {
+//       const std::vector<ValueId> &first  = interpreter.arrayPool[array];
+//       const std::vector<ValueId> &second = interpreter.arrayPool[r.array];
+//       size_t size = std::min(first.size(), second.size());
 
-      for (size_t i = 0; i < size; ++i) {
-         const Value &firstValue  = interpreter.valuePool[first[i]];
-         const Value &secondValue = interpreter.valuePool[second[i]];
-         if (!firstValue.equal(interpreter, secondValue)) {
-            return firstValue.greater(interpreter, secondValue);
-         }
-      }
-      return first.size() > second.size();
-   }
+//       for (size_t i = 0; i < size; ++i) {
+//          const Value &firstValue  = interpreter.valuePool[first[i]];
+//          const Value &secondValue = interpreter.valuePool[second[i]];
+//          if (!firstValue.equal(interpreter, secondValue)) {
+//             return firstValue.greater(interpreter, secondValue);
+//          }
+//       }
+//       return first.size() > second.size();
+//    }
 
-   if (type == ValueType::string && r.type == ValueType::string) {
-      const std::string &first  = interpreter.arena.strings[string];
-      const std::string &second = interpreter.arena.strings[r.string];
-      std::string a = first;
-      std::string b = second;
+//    if (type == ValueType::string && r.type == ValueType::string) {
+//       const std::string &first  = interpreter.arena.strings[string];
+//       const std::string &second = interpreter.arena.strings[r.string];
+//       std::string a = first;
+//       std::string b = second;
 
-      std::transform(a.begin(), a.end(), a.begin(), ::tolower);
-      std::transform(b.begin(), b.end(), b.begin(), ::tolower);
+//       std::transform(a.begin(), a.end(), a.begin(), ::tolower);
+//       std::transform(b.begin(), b.end(), b.begin(), ::tolower);
 
-      return a > b;
-   }
+//       return a > b;
+//    }
 
-   raiseError(line, "Cannot compare %s value to %s value.",
-      getValueTypeAsString(type), getValueTypeAsString(r.type));
-}
+//    raiseError(line, "Cannot compare %s value to %s value.",
+//       getValueTypeAsString(type), getValueTypeAsString(r.type));
+// }
 
-std::string Value::asString(Interpreter &interpreter) const {
-   if (type == ValueType::type)    return getValueTypeAsString(vtype);
-   if (type == ValueType::null)    return "";
-   if (type == ValueType::boolean) return (boolean ? "true" : "false");
-   if (type == ValueType::string)  return interpreter.arena.strings[string];
+// std::string Value::asString(Interpreter &interpreter) const {
+//    if (type == ValueType::type)    return getValueTypeAsString(vtype);
+//    if (type == ValueType::null)    return "";
+//    if (type == ValueType::boolean) return (boolean ? "true" : "false");
+//    if (type == ValueType::string)  return interpreter.arena.strings[string];
 
-   if (type == ValueType::character) {
-      return std::string(1, interpreter.arena.strings[character.stringId][character.index]);
-   }
+//    if (type == ValueType::character) {
+//       return std::string(1, interpreter.arena.strings[character.stringId][character.index]);
+//    }
 
-   if (type == ValueType::number) {
-      std::string string = std::to_string(number);
-      return string.substr(0, string.size() - (number == floorl(number) ? 7 : 4));
-   }
-   raiseError(line, "Cannot convert %s value to String value.", getValueTypeAsString(type));
-}
+//    if (type == ValueType::number) {
+//       std::string string = std::to_string(number);
+//       return string.substr(0, string.size() - (number == floorl(number) ? 7 : 4));
+//    }
+//    raiseError(line, "Cannot convert %s value to String value.", getValueTypeAsString(type));
+// }
 
-long double Value::asNumber(Interpreter &interpreter) const {
-   if (type == ValueType::null)      return 0;
-   if (type == ValueType::number)    return number;
-   if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index];
-   raiseError(line, "Cannot convert %s value to Number value.", getValueTypeAsString(type));
-}
+// long double Value::asNumber(Interpreter &interpreter) const {
+//    if (type == ValueType::null)      return 0;
+//    if (type == ValueType::number)    return number;
+//    if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index];
+//    raiseError(line, "Cannot convert %s value to Number value.", getValueTypeAsString(type));
+// }
 
-bool Value::asBoolean(Interpreter &interpreter) const {
-   if (type == ValueType::null)      return false;
-   if (type == ValueType::number)    return number != 0.0;
-   if (type == ValueType::boolean)   return boolean;
-   if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index] != 0;
-   if (type == ValueType::string)    return !interpreter.arena.strings[string].empty();
-   if (type == ValueType::array)     return true;
-   raiseError(line, "Cannot convert %s value to Boolean value.", getValueTypeAsString(type));
-}
+// bool Value::asBoolean(Interpreter &interpreter) const {
+//    if (type == ValueType::null)      return false;
+//    if (type == ValueType::number)    return number != 0.0;
+//    if (type == ValueType::boolean)   return boolean;
+//    if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index] != 0;
+//    if (type == ValueType::string)    return !interpreter.arena.strings[string].empty();
+//    if (type == ValueType::array)     return true;
+//    raiseError(line, "Cannot convert %s value to Boolean value.", getValueTypeAsString(type));
+// }
 
-char Value::asChar(Interpreter &interpreter) const {
-   if (type == ValueType::null)      return 0;
-   if (type == ValueType::number)    return number;
-   if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index];
-   if (type == ValueType::string && interpreter.arena.strings[string].size() == 1) {
-      return interpreter.arena.strings[string][0];
-   }
-   raiseError(line, "Cannot convert %s value to Character value.", getValueTypeAsString(type));
-}
+// char Value::asChar(Interpreter &interpreter) const {
+//    if (type == ValueType::null)      return 0;
+//    if (type == ValueType::number)    return number;
+//    if (type == ValueType::character) return interpreter.arena.strings[character.stringId][character.index];
+//    if (type == ValueType::string && interpreter.arena.strings[string].size() == 1) {
+//       return interpreter.arena.strings[string][0];
+//    }
+//    raiseError(line, "Cannot convert %s value to Character value.", getValueTypeAsString(type));
+// }
